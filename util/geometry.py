@@ -9,7 +9,7 @@ class Pt(object):
         self.x = pt[0]
         self.y = pt[1]
 
-    def __add__(self, other: Vector2):
+    def __add__(self, other: Vector2) -> 'Pt':
         return Pt((self.x + other.x, self.y + other.y))
 
     def __str__(self):
