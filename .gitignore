@@ -1,5 +1,7 @@
 env/
 exercises/
 
+.vscode/
+
 __pycache__/
 *.pyc
