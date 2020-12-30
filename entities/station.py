@@ -1,13 +1,13 @@
 import pygame as pg
 from pygame.math import Vector2
 from math import ceil
-from util.geometry import Pt
+from typing import Tuple
 
 
 class Station(object):
     SQUARE, CIRCLE, TRIANGLE = "square", "circle", "triangle"
 
-    def __init__(self, shape, location: Pt):
+    def __init__(self, shape, location: Vector2):
         self.shape = shape
         self.location = location
         self.tracks = {}
@@ -20,8 +20,8 @@ class Station(object):
 
         # CIRCLE
         elif self.shape == Station.CIRCLE:
-            pg.draw.circle(surface, (180, 180, 180), self.location.as_tuple(), 25)
-            pg.draw.circle(surface, (0, 0, 0), self.location.as_tuple(), 25, 5)
+            pg.draw.circle(surface, (180, 180, 180), self.location, 25)
+            pg.draw.circle(surface, (0, 0, 0), self.location, 25, 5)
 
         # TRIANGLE
         elif self.shape == Station.TRIANGLE:
@@ -34,33 +34,27 @@ class Station(object):
                              [self.location.x + 25, self.location.y+17],
                              [self.location.x - 25, self.location.y+17]], 5)
 
-    def contains(self, pt: Pt):
-        return (self.location.x-pt.x) ** 2 + (self.location.y-pt.y) ** 2 < 625
+    def contains(self, pt: Tuple[int, int]):
+        return (self.location.x-pt[0]) ** 2 + (self.location.y-pt[1]) ** 2 < 625
 
-    def track_offset(self, direction: Vector2, set: bool):
-        dv = (direction.x, direction.y)
-
-        if dv not in self.tracks:
-            if set:
-                self.tracks[dv] = [True]
-            return 0
-
-        if False in self.tracks[dv]:
-            index = self.tracks[dv].index(False)
-            if set:
-                self.tracks[dv][index] = True
+    def track_offset(self, dv: Vector2, set: bool):
+        _dv = (dv.x, dv.y)
+        if _dv not in self.tracks:
+            index = 0
+        elif False in self.tracks[_dv]:
+            index = self.tracks[_dv].index(False)
         else:
-            index = len(self.tracks[dv])
-            if set:
-                self.tracks[dv].append(True)
+            index = len(self.tracks[_dv])
 
-        return Station.index_to_offset(index)
+        offset = Station.index_to_offset(index)
+        if set:
+            self.use_offset(dv, offset)
+        return offset
 
-    def use_offset(self, direction: Vector2, offset: int):
+    def use_offset(self, dv: Vector2, offset: int):
+        dv = (dv.x, dv.y)
         # turn the offset back to an index
         index = self.offset_to_index(offset)
-
-        dv = (direction.x, direction.y)
 
         # make sure the offset list is large enough
         if dv not in self.tracks:
@@ -69,10 +63,11 @@ class Station(object):
             while len(self.tracks[dv]) < index+1:
                 self.tracks[dv].append(False)
 
+        # mark the offset as used
         self.tracks[dv][index] = True
 
-    def can_use_offset(self, direction, offset):
-        dv = (direction.x, direction.y)
+    def can_use_offset(self, dv: Vector2, offset):
+        dv = (dv.x, dv.y)
         index = self.offset_to_index(offset)
         return not(dv in self.tracks and
                    len(self.tracks[dv]) > index and

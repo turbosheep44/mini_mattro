@@ -1,5 +1,6 @@
 import pygame as pg
 from pygame import Vector2
+from typing import List
 
 
 # events
@@ -13,8 +14,8 @@ RIGHT = "right"
 LEFT = "left"
 MIDDLE = "middle"
 
-CARDINALS = [Vector2(0, 1), Vector2(1, 0), Vector2(0, -1), Vector2(-1, 0),
-             Vector2(1, -1), Vector2(1, 1), Vector2(-1, -1),  Vector2(-1, 1)]
+CARDINALS: List[Vector2] = [Vector2(0, 1), Vector2(1, 0), Vector2(0, -1), Vector2(-1, 0),
+                            Vector2(1, -1), Vector2(1, 1), Vector2(-1, -1),  Vector2(-1, 1)]
 COLORS = [(125, 0, 0), (0, 125, 0), (0, 0, 125), (125, 125, 0), (125, 0, 125), (0, 125, 125), (125, 125, 125),
           (125, 0, 125), (125, 125, 0), (0, 125, 125)]
 

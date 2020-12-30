@@ -9,14 +9,14 @@ from util import *
 
 
 def setup():
-    data.stations = [Station(Station.CIRCLE, Pt((125, 100))),
-                     Station(Station.CIRCLE, Pt((350, 150))),
-                     Station(Station.CIRCLE, Pt((300, 350))),
-                     Station(Station.CIRCLE, Pt((600, 650))),
-                     Station(Station.SQUARE, Pt((400, 250))),
-                     Station(Station.SQUARE, Pt((500, 500))),
-                     Station(Station.TRIANGLE, Pt((100, 450))),
-                     Station(Station.TRIANGLE, Pt((100, 250)))]
+    data.stations = [Station(Station.CIRCLE, Vector2(125, 100)),
+                     Station(Station.CIRCLE, Vector2(350, 150)),
+                     Station(Station.CIRCLE, Vector2(300, 350)),
+                     Station(Station.CIRCLE, Vector2(600, 650)),
+                     Station(Station.SQUARE, Vector2(400, 250)),
+                     Station(Station.SQUARE, Vector2(500, 500)),
+                     Station(Station.TRIANGLE, Vector2(100, 450)),
+                     Station(Station.TRIANGLE, Vector2(100, 250))]
 
     data.create_rail(gui)
     data.create_rail(gui)
@@ -55,7 +55,7 @@ def update(dt):
 def left_click_down(event):
     s = clip_to_station(event.pos)
     if s != None and data.active_rail.is_station_valid(s):
-        data.tmp_segment = TrackSegment(data.active_rail.color, data.stations[s].location, Pt(event.pos), (s, None))
+        data.tmp_segment = TrackSegment(data.active_rail.color, data.stations[s].location, (s, None))
 
 
 def left_click_up(event):
@@ -74,7 +74,7 @@ def mouse_move(event):
         if data.active_rail.is_on_rail(s):
             s = None
 
-        location = Pt(event.pos) if s == None else data.stations[s].location
+        location = event.pos if s == None else data.stations[s].location
 
         data.tmp_segment.update_dst(data.stations, location, s)
 
@@ -82,7 +82,7 @@ def mouse_move(event):
 def clip_to_station(pt):
     # clip to station first
     for i, s in enumerate(data.stations):
-        if s.contains(Pt(pt)):
+        if s.contains(pt):
             return i
 
     return None

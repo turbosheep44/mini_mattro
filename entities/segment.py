@@ -1,15 +1,15 @@
+from util.draw import ortholine
 from pygame.math import Vector2
 from typing import Tuple
-from util.geometry import Pt
 from util.constants import *
 from entities.station import Station
 from typing import List
 
 
 class TrackSegment(object):
-    def __init__(self, color, origin: Pt, dst: Pt, stations: Tuple[int, int]):
-        self.origin = origin
-        self.dst = dst
+    def __init__(self, color, origin, stations: Tuple[int, int]):
+        self.origin: Vector2 = Vector2(origin)
+        self.dst: Vector2 = Vector2(0, 0)
         self.stations = stations
         self.color = color
 
@@ -21,11 +21,9 @@ class TrackSegment(object):
         self.previous: TrackSegment = None
         self.next: TrackSegment = None
 
-        self.pts: list[Tuple[float, float]] = [self.origin.as_tuple(),
-                                               self.origin.as_tuple(),
-                                               self.dst.as_tuple()]
+        self.pts: list[Vector2] = []
 
-    def update_dst(self, stations: List[Station], dst: Pt, station: int):
+    def update_dst(self, stations: List[Station], dst, station: int):
         """
         update_dst sets a new station to be the new destination of this track segment,
         recalculating offsets and drawing points
@@ -33,28 +31,25 @@ class TrackSegment(object):
         if self.is_realised:
             raise ValueError("cannot call update_dst on a track segment which has been realised")
 
-        self.dst = dst
+        self.dst = Vector2(dst)
         self.stations = (self.stations[0], station)
 
         # no points required when points are the same
         if self.origin == self.dst:
-            self.dst = Pt(self.dst.as_tuple())
             self.dst.y += 1
 
         # only 1 cardinal required when points lie along a cardinal line
         if self.origin.x == self.dst.x or self.origin.y == self.dst.y or \
                 abs(self.origin.x - self.dst.x) == abs(self.origin.y - self.dst.y):
 
-            cardinal = self.origin.vector_to(self.dst)
-            cardinal.scale_to_length(cardinal.length()/(abs(cardinal.x) if cardinal.x != 0 else abs(cardinal.y)))
+            cardinal = self.dst - self.origin
+            cardinal.scale_to_length(abs(cardinal.x) if cardinal.x != 0 else abs(cardinal.y))
             self.cardinals = [cardinal]
-            self.cardinals.append(Vector2(self.cardinals[0]).rotate(180))
+            self.cardinals.append(self.cardinals[0].rotate(180))
 
             self.recalculate_offsets(stations)
-            self.pts = [self.origin.as_tuple(),
-                        self.origin_offset().as_tuple(),
-                        self.dst_offset().as_tuple(),
-                        self.dst.as_tuple()]
+            self.pts = [self.origin, self.origin_offset(),
+                        self.dst_offset(), self.dst]
             return
 
         # get the cardinals and work out in which order to use them
@@ -72,13 +67,22 @@ class TrackSegment(object):
         p, _ = self.find_factors(a, b, True)
         a.scale_to_length(p * a.length())
 
-        self.pts = [self.origin.as_tuple(),
-                    self.origin_offset().as_tuple(),
-                    (self.origin_offset() + a).as_tuple(),
-                    self.dst_offset().as_tuple(),
-                    self.dst.as_tuple()]
+        self.pts = [self.origin, self.origin_offset(),
+                    (self.origin_offset() + a),
+                    self.dst_offset(), self.dst]
 
     def find_order(self, a: Vector2, b: Vector2) -> bool:
+        """
+        find_order decides whether `a` or `b` should be used first when constructing the track
+        the vector is chosen to create the smallest movement in the line possible (assuming it exists)
+
+        the boolean returned indicates whether the vectors should be swapped
+        """
+
+        # line does not yet exist (order does not matter)
+        if len(self.pts) == 0:
+            return False
+
         p, q = self.find_factors(a, b)
         a.scale_to_length(p * a.length())
         b.scale_to_length(q * b.length())
@@ -92,11 +96,12 @@ class TrackSegment(object):
 
     def find_factors(self, a: Vector2, b: Vector2, useOffset: bool = False):
         """
-            returns `p, q` such that `pa + qb = self.vector()`
+            returns `p, q` such that `pa + qb = self.dst - self.origin`
 
             assumes that at exactly one of the values `a.x, a.y, b.x, b.y` is `0`
+            because one of the cardinals will always be either horizontal or vertical
         """
-        v = self.vector(useOffset)
+        v = self.dst - self.origin if not useOffset else self.dst_offset() - self.origin_offset()
 
         # p*a_x + q*b_x = v_x
         # p*a_y + q*b_y = v_y
@@ -116,8 +121,8 @@ class TrackSegment(object):
         return (p, q) if not reversed else (q, p)
 
     def choose_closest_cardinals(self) -> Tuple[Vector2, Vector2]:
-        vec = self.vector()
-        angles = [abs(cardinal.angle_to(vec)) for cardinal in CARDINALS]
+        dv = self.dst - self.origin
+        angles = [abs(cardinal.angle_to(dv)) for cardinal in CARDINALS]
 
         smallest = sorted(enumerate(angles), key=lambda a: a[1] if a[1] < 180 else 360 - a[1])
 
@@ -125,7 +130,7 @@ class TrackSegment(object):
 
     def recalculate_offsets(self, stations, isFinal: bool = False):
         # if the cardinals are opposite (straight line track), then force the offsets to be identical
-        # this only actually matters if there is a second station invovled
+        # this only actually matters if there is a second station involved
         if self.stations[1] != None and self.cardinals[0].rotate(180) == self.cardinals[1]:
             # get the first available start offset
             self.start_offset = stations[self.stations[0]].track_offset(self.cardinals[0], False)
@@ -139,8 +144,8 @@ class TrackSegment(object):
                 self.end_offset = self.start_offset
 
             if isFinal:
-                for i, offset in zip(range(2), (self.start_offset, self.end_offset)):
-                    stations[self.stations[i]].use_offset(self.cardinals[i], offset)
+                stations[self.stations[0]].use_offset(self.cardinals[0], self.start_offset)
+                stations[self.stations[1]].use_offset(self.cardinals[1], self.end_offset)
 
             return
 
@@ -151,20 +156,17 @@ class TrackSegment(object):
         else:
             self.end_offset = 0
 
-    def origin_offset(self):
+    def origin_offset(self) -> Tuple[int, int]:
         return self.__offset_pt__(self.origin, self.cardinals[0], self.start_offset)
 
-    def dst_offset(self):
+    def dst_offset(self) -> Tuple[int, int]:
         return self.__offset_pt__(self.dst, self.cardinals[1], self.end_offset)
 
-    def __offset_pt__(self, pt: Pt, relative_to: Vector2, amount: int):
-        offset = pt.clone()
+    def __offset_pt__(self, pt, relative_to: Vector2, amount: int) -> Vector2:
         if relative_to.y == 0:
-            offset.y += amount*-10
+            return pt + (0, (amount*-10))
         else:
-            offset.x += amount*10
-
-        return offset
+            return pt + ((amount*-10), 0)
 
     def realise(self, stations: List[Station]):
         """
@@ -175,30 +177,25 @@ class TrackSegment(object):
         self.recalculate_offsets(stations, True)
         self.is_realised = True
 
-        pts = [Pt(pt) for pt in self.pts]
-        self.lengths = [src.distance_to(dst) for (src, dst) in zip(pts, self.pts[1:])]
+        self.lengths = [src.distance_to(dst) for (src, dst) in zip(self.pts, self.pts[1:])]
         self.length = sum(self.lengths)
-        self.vectors = [src.vector_to(dst) for (src, dst) in zip(pts, pts[1:])]
+        self.vectors = [dst-src for (src, dst) in zip(self.pts, self.pts[1:])]
         self.position_update = TRAIN_SPEED / self.length
-
-    def vector(self, useOffset: bool = False):
-        return self.origin.vector_to(self.dst) if not useOffset else\
-            self.origin_offset().vector_to(self.dst_offset())
 
     def draw(self, surface):
         if not len(self.pts):
             return
 
-        pg.draw.lines(surface, self.color, False, self.pts, 10)
-        for joint in self.pts:
-            pg.draw.circle(surface, self.color, joint, 5)
+        for start, end in zip(self.pts, self.pts[1:]):
+            ortholine(surface, self.color, start, end, 10, rounded=True)
 
     def reverse(self):
         self.stations = self.stations[::-1]
         self.origin, self.dst = self.dst, self.origin
+        self.cardinals.reverse()
         self.pts.reverse()
 
-    def lerp_position(self, position) -> Tuple[Pt, Vector2]:
+    def lerp_position(self, position) -> Tuple[Vector2, Vector2]:
         """
         provided with a position in the range [0, 1] this function returns a 
         set of co-ordinates and a direction vector for a train which is that percentage 
@@ -224,5 +221,5 @@ class TrackSegment(object):
         # train is between points i and i+1, (position*100 / self.lengths[i])% of the way
         dv = self.vectors[i]
         dv.scale_to_length(position)
-        pt = Pt(self.pts[i]) + dv
+        pt = self.pts[i] + dv
         return pt, dv

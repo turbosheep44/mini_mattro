@@ -1,5 +1,6 @@
 
 from entities.segment import TrackSegment
+from util.draw import ortholine
 import pygame as pg
 
 
@@ -29,5 +30,5 @@ class Train(object):
 
     def draw(self, surface):
         pt, dv = self.current_segment.lerp_position(self.position)
-        dv.scale_to_length(10)
-        pg.draw.line(surface, (255, 255, 255), pt.as_tuple(), (pt + dv).as_tuple(), 4)
+        dv.scale_to_length(30)
+        ortholine(surface, (255, 255, 255), pt - (dv/2), pt + (dv/2), 16)
