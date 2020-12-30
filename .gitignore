@@ -1,2 +1,4 @@
 env/
 exercises/
+
+__pycache__/
