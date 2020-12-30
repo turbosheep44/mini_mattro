@@ -1,22 +1,23 @@
 import pygame as pg
+import random
 from pygame.constants import K_SPACE
 
 from gui import setup_gui
-from entities import TrackSegment, Station
+from entities import TrackSegment, Station, Train
 from util import *
 
 # ########### TMP ###############
 
 
 def setup():
-    data.stations = [Station(Station.CIRCLE, Vector2(125, 100)),
-                     Station(Station.CIRCLE, Vector2(350, 150)),
-                     Station(Station.CIRCLE, Vector2(300, 350)),
-                     Station(Station.CIRCLE, Vector2(600, 650)),
-                     Station(Station.SQUARE, Vector2(400, 250)),
-                     Station(Station.SQUARE, Vector2(500, 500)),
-                     Station(Station.TRIANGLE, Vector2(100, 450)),
-                     Station(Station.TRIANGLE, Vector2(100, 250))]
+    data.stations = [Station(Shape.CIRCLE, Vector2(125, 100)),
+                     Station(Shape.CIRCLE, Vector2(350, 150)),
+                     Station(Shape.CIRCLE, Vector2(300, 350)),
+                     Station(Shape.CIRCLE, Vector2(600, 650)),
+                     Station(Shape.SQUARE, Vector2(400, 250)),
+                     Station(Shape.SQUARE, Vector2(500, 500)),
+                     Station(Shape.TRIANGLE, Vector2(100, 450)),
+                     Station(Shape.TRIANGLE, Vector2(100, 250))]
 
     data.create_rail(gui)
     data.create_rail(gui)
@@ -45,11 +46,30 @@ def update(dt):
         elif event.type == SCORE_POINT:
             data.score += 1
             gui.set_score(data.score)
-        elif event.type == pg.KEYDOWN and event.key == K_SPACE:
-            pg.event.post(pg.event.Event(SCORE_POINT))
+        elif event.type == TRAIN_STOP:
+            train_stop(event)
 
     for r in data.rails:
-        r.update(dt)
+        r.update(dt, data)
+
+    global passenger_spawn
+    passenger_spawn += dt
+    if passenger_spawn > 1:
+        random.choice(data.stations).create_passenger(random.choice(list(Shape)))
+        passenger_spawn = 0
+
+
+def train_stop(event):
+    station: Station = data.stations[event.station]
+    train: Train = event.train
+
+    for passenger in station.passengers:
+        if passenger.should_embark():
+            train.embark.append(passenger)
+
+    for passenger in train.passengers:
+        if passenger.should_disembark():
+            train.disembark.append(passenger)
 
 
 def left_click_down(event):
@@ -129,8 +149,9 @@ font = pg.font.SysFont('OpenSans-Regular', 24)
 dt = 0
 
 gui = setup_gui([1000, 900])
-
 setup()
+
+passenger_spawn = 0
 
 running = False
 while not running:

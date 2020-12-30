@@ -15,9 +15,9 @@ class Rail(object):
             return f'[ {", ".join([f"{segment.stations[0]}:{segment.stations[1]}" for segment in self.segments])} ]'
         return "[]"
 
-    def update(self, dt):
+    def update(self, dt, data):
         for train in self.trains:
-            train.update(dt)
+            train.update(dt, data)
 
     def draw(self, layers):
         for segment in self.segments:

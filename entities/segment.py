@@ -212,6 +212,8 @@ class TrackSegment(object):
         position = self.length * position
         if position == 0:
             position = 0.001
+        elif position == 1:
+            position = 0.999
 
         i = 0
         while position > self.lengths[i]:

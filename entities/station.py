@@ -1,3 +1,5 @@
+from util.draw import Shape
+from entities.passenger import Passenger
 import pygame as pg
 from pygame.math import Vector2
 from math import ceil
@@ -5,34 +7,21 @@ from typing import Tuple
 
 
 class Station(object):
-    SQUARE, CIRCLE, TRIANGLE = "square", "circle", "triangle"
 
-    def __init__(self, shape, location: Vector2):
+    def __init__(self, shape: Shape, location: Vector2):
         self.shape = shape
         self.location = location
         self.tracks = {}
+        self.passengers: Passenger = []
+
+    def create_passenger(self, shape):
+        self.passengers.append(Passenger(shape))
 
     def draw(self, surface):
-        # SQUARE
-        if self.shape == Station.SQUARE:
-            pg.draw.rect(surface, (180, 180, 180), pg.Rect(self.location.x-20, self.location.y-20, 40, 40))
-            pg.draw.rect(surface, (0, 0, 0), pg.Rect(self.location.x-20, self.location.y-20, 40, 40), 5)
+        for i, p in enumerate(self.passengers):
+            p.draw(surface, self.location, i)
 
-        # CIRCLE
-        elif self.shape == Station.CIRCLE:
-            pg.draw.circle(surface, (180, 180, 180), self.location, 25)
-            pg.draw.circle(surface, (0, 0, 0), self.location, 25, 5)
-
-        # TRIANGLE
-        elif self.shape == Station.TRIANGLE:
-            pg.draw.polygon(surface, (180, 180, 180),
-                            [[self.location.x, self.location.y - 25],
-                             [self.location.x + 25, self.location.y+17],
-                             [self.location.x - 25, self.location.y+17]])
-            pg.draw.polygon(surface, (0, 0, 0),
-                            [[self.location.x, self.location.y - 25],
-                             [self.location.x + 25, self.location.y+17],
-                             [self.location.x - 25, self.location.y+17]], 5)
+        self.shape.draw(surface, self.location, 40, True, 4)
 
     def contains(self, pt: Tuple[int, int]):
         return (self.location.x-pt[0]) ** 2 + (self.location.y-pt[1]) ** 2 < 625
