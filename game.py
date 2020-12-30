@@ -89,23 +89,29 @@ def clip_to_station(pt):
 
 
 def draw():
+    # clear the screen
     surface.fill((100, 100, 100))
+    for layer in layers:
+        layer.fill((0, 0, 0, 0))
 
     for r in data.rails:
-        r.draw(surface)
+        r.draw(layers)
 
     if data.tmp_segment:
-        data.tmp_segment.draw(surface)
+        data.tmp_segment.draw(layers[0])
 
     for s in data.stations:
-        s.draw(surface)
+        s.draw(layers[-1])
 
-    gui.draw(surface)
+    gui.draw(layers[-1])
 
     # show fps
     fps = font.render(str(int(clock.get_fps())), False, (255, 255, 255))
     surface.blit(fps, (surface.get_size()[0]-fps.get_size()[0], 0))
 
+    # draw each layer
+    for layer in layers:
+        surface.blit(layer, (0, 0))
     pg.display.flip()
 
 
@@ -113,7 +119,9 @@ def draw():
 pg.init()
 pg.font.init()
 
-surface = pg.display.set_mode([1000, 900])
+surface = pg.display.set_mode([1000, 900], pg.DOUBLEBUF)
+layers = [pg.Surface([1000, 900], pg.SRCALPHA) for _ in range(3)]
+
 pg.display.set_caption("MiniMattro")
 
 clock = pg.time.Clock()

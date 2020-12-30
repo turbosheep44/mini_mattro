@@ -19,12 +19,12 @@ class Rail(object):
         for train in self.trains:
             train.update(dt)
 
-    def draw(self, surface):
+    def draw(self, layers):
         for segment in self.segments:
-            segment.draw(surface)
+            segment.draw(layers[0])
 
         for train in self.trains:
-            train.draw(surface)
+            train.draw(layers[1])
 
     def add_segment(self, segment: TrackSegment, stations: List[Station]):
         # first segment, add to list and automatically create a train
