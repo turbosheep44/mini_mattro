@@ -43,7 +43,7 @@ class TrackSegment(object):
                 abs(self.origin.x - self.dst.x) == abs(self.origin.y - self.dst.y):
 
             cardinal = self.dst - self.origin
-            cardinal.scale_to_length(abs(cardinal.x) if cardinal.x != 0 else abs(cardinal.y))
+            cardinal.scale_to_length(cardinal.length() / (abs(cardinal.x) if cardinal.x != 0 else abs(cardinal.y)))
             self.cardinals = [cardinal]
             self.cardinals.append(self.cardinals[0].rotate(180))
 
