@@ -26,6 +26,22 @@ class Rail(object):
         for train in self.trains:
             train.draw(layers[1])
 
+    def remove_segment(self, segment: TrackSegment):
+        if len(self.segments) == 0:
+            return
+
+        self.segments.remove(segment)
+
+        if len(self.segments) == 0:
+            self.trains = []
+        elif len(self.segments) == 1:
+            self.segments[0].previous, self.segments[0].next = None, None
+        else:
+            first, last = self.segments[0], self.segments[-1]
+            first.previous, first.next = None, self.segments[1]
+            for i in range(1, len(self.segments)-1):
+                self.segments[i].previous, self.segments[i].next = self.segments[i-1], self.segments[i+1]
+
     def add_segment(self, segment: TrackSegment, stations: List[Station]):
         # first segment, add to list and automatically create a train
         if len(self.segments) == 0:

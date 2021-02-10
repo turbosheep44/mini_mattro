@@ -48,16 +48,24 @@ def update(dt):
             gui.set_score(data.score)
         elif event.type == TRAIN_STOP:
             train_stop(event)
+        elif event.type == pg.KEYDOWN:
+            remove_segment(event)
 
     for r in data.rails:
         r.update(dt, data)
 
     global passenger_spawn
     passenger_spawn += dt
-    if passenger_spawn > 1:
-        random.choice(data.stations).create_passenger(random.choice(list(Shape)))
-        passenger_spawn = 0
+    # if passenger_spawn > 1:
+    #     random.choice(data.stations).create_passenger(random.choice(list(Shape)))
+    #     passenger_spawn = 0
 
+
+def remove_segment(event):
+    if(event.key == pg.K_UP):
+        data.active_rail.remove_segment(data.active_rail.segments[-1])
+    elif(event.key == pg.K_DOWN):
+        data.active_rail.remove_segment(data.active_rail.segments[0])
 
 def train_stop(event):
     station: Station = data.stations[event.station]
@@ -73,7 +81,8 @@ def train_stop(event):
 
 
 def left_click_down(event):
-    s = clip_to_station(event.pos)
+    pt = event.pos
+    s = clip_to_station(pt)
     if s != None and data.active_rail.is_station_valid(s):
         data.tmp_segment = TrackSegment(data.active_rail.color, data.stations[s].location, (s, None))
 
@@ -89,17 +98,21 @@ def left_click_up(event):
 
 
 def mouse_move(event):
+
+    pt = event.pos
+
     if data.tmp_segment:
-        s = clip_to_station(event.pos)
+        s = clip_to_station(pt)
         if data.active_rail.is_on_rail(s):
             s = None
 
-        location = event.pos if s == None else data.stations[s].location
+        location = pt if s == None else data.stations[s].location
 
         data.tmp_segment.update_dst(data.stations, location, s)
 
 
 def clip_to_station(pt):
+    
     # clip to station first
     for i, s in enumerate(data.stations):
         if s.contains(pt):
