@@ -20,6 +20,8 @@ class Train(object):
         self.embark: list[Passenger] = []
         self.passengers = []
 
+        self.todelete = False
+
     def update(self, dt, data):
         # keep moving the train until it gets to another station
         if not self.is_stopped:

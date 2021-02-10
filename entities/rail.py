@@ -2,13 +2,15 @@ from entities.station import Station
 from entities.segment import TrackSegment
 from entities.train import Train
 from typing import List
-
+import pygame as pg
+from util.constants import SCORE_POINT
 
 class Rail(object):
     def __init__(self, color):
         self.color = color
         self.segments: list[TrackSegment] = []
         self.trains: list[Train] = []
+        self.todelete: bool = False
 
     def __str__(self):
         if len(self.segments) != 0:
@@ -18,6 +20,19 @@ class Rail(object):
     def update(self, dt, data):
         for train in self.trains:
             train.update(dt, data)
+
+            if self.todelete and train.is_stopped:
+                print("Disembarking passengers")
+                station = data.stations[train.stopped_station]
+
+                for passenger in train.passengers: 
+                    if passenger.shape != station.shape:
+                        station.passengers.append(passenger)
+                    else:
+                        pg.event.post(pg.event.Event(SCORE_POINT))
+                
+                self.trains = []
+                self.todelete = False
 
     def draw(self, layers):
         for segment in self.segments:
@@ -33,7 +48,7 @@ class Rail(object):
         self.segments.remove(segment)
 
         if len(self.segments) == 0:
-            self.trains = []
+            self.todelete = True
         elif len(self.segments) == 1:
             self.segments[0].previous, self.segments[0].next = None, None
         else:
