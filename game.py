@@ -25,6 +25,21 @@ def setup():
 
 # ############## GAME ################
 
+def passenger(dt):
+    global passenger_spawn
+    passenger_spawn += dt
+    if passenger_spawn > 1:
+
+        randomStation = random.choice(data.stations)
+        randomPassenger = random.choice(list(Shape))
+
+        while randomPassenger == randomStation.shape:
+            randomStation = random.choice(data.stations)
+            randomPassenger = random.choice(list(Shape))
+
+        randomStation.create_passenger(randomPassenger)
+        passenger_spawn = 0
+    
 
 def update(dt):
     gui.update(dt)
@@ -53,14 +68,13 @@ def update(dt):
 
     for r in data.rails:
         r.update(dt, data)
-
+        
     global passenger_spawn
     passenger_spawn += dt
     # if passenger_spawn > 1:
     #     random.choice(data.stations).create_passenger(random.choice(list(Shape)))
     #     passenger_spawn = 0
-
-
+    
 def remove_segment(event):
     if(event.key == pg.K_UP):
         data.active_rail.remove_segment(data.active_rail.segments[-1])
@@ -72,11 +86,12 @@ def train_stop(event):
     train: Train = event.train
 
     for passenger in station.passengers:
+        print("Picking Up Someone")
         if passenger.should_embark():
             train.embark.append(passenger)
 
     for passenger in train.passengers:
-        if passenger.should_disembark():
+        if passenger.should_disembark(station.shape):
             train.disembark.append(passenger)
 
 
@@ -171,6 +186,7 @@ while not running:
     dt = clock.tick(60)
     # update
     update(dt/1000)
+    passenger(dt/5000)
 
     # display
     draw()
