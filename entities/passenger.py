@@ -15,5 +15,10 @@ class Passenger(object):
     def should_embark(self) -> bool:
         return True
 
-    def should_disembark(self) -> bool:
-        return True
+    def should_disembark(self, shape) -> bool:
+        if self.shape == shape:
+            print("self.shape = " + str(self.shape))
+            print("station.shape= " + str(shape))
+            return True
+        else:
+            return False
