@@ -147,21 +147,21 @@ if __name__ == '__main__':
     g.add_edge('b', 'f', 9)
     g.add_edge('e', 'f', 14)
 
-    start = "a"
-    to = "b"
-    print ('Graph data:')
-    for v in g:
-        for w in v.get_connections():
-            vid = v.get_id()
-            wid = w.get_id()
-            if vid == start and wid == to:
-                print ('( %s , %s, %3d)'  % ( vid, wid, v.get_weight(w)))
+    # start = "a"
+    # to = "e"
+    # print ('Graph data:')
+    # for v in g:
+    #     for w in v.get_connections():
+    #         vid = v.get_id()
+    #         wid = w.get_id()
+    #         if vid == start and wid == to:
+    #             print ('( %s , %s, %3d)'  % ( vid, wid, v.get_weight(w)))
 
             
     dijkstra(g, g.get_vertex('a')) 
 
-    target = g.get_vertex('e')
-    path = [target.get_id()]
-    shortest(target, path)
-    print ('The shortest path : %s' %(path[::-1]))
+    # target = g.get_vertex('e')
+    # path = [target.get_id()]
+    # shortest(target, path)
+    # print ('The shortest path : %s' %(path[::-1]))
  

@@ -18,7 +18,7 @@ def setup():
                     #  Station(Shape.CIRCLE, Vector2(600, 650)),
                      Station(Shape.SQUARE, Vector2(400, 250)),
                     #  Station(Shape.SQUARE, Vector2(500, 500)),
-                    #  Station(Shape.TRIANGLE, Vector2(100, 450)),
+                     Station(Shape.TRIANGLE, Vector2(100, 450)),
                      Station(Shape.TRIANGLE, Vector2(100, 250))]
 
     data.create_rail(gui)
@@ -37,24 +37,43 @@ def setup():
         # s.draw(layers[-1])
         # print(s.location)
         g.add_vertex(str(s))
+    
+    
+    # g.add_edge('a', 'b', 7)  
+    # g.add_edge('b', 'f', 9)
+    # g.add_edge('e', 'f', 14)
+    # g.add_edge('e', 'z', 14)
 
-    # g.add_edge('1', '2', 11)
-    # print(g.vert_dict)
+    # g.add_edge('g', 'd', 11)
+    
+    print("")
+    print("")
+    
 
-    # print(g.get_vertices())
+    
+  
+    # print ('( %s , %s, %3d)'  % ( vid, wid, v.get_weight(w)))
+
+
+
+    print("")
+    print("")
+    # print(roots)
+
+   
+    # for 
+
+    # print(paths)
+
+    
+
+
     # for v in g:
     
-    #     print(v.get_connections())
+    
 
 
-    # g.add_vertex('a')
-    # g.add_vertex('b')
-    # g.add_vertex('c')
-    # g.add_vertex('d')
-    # g.add_vertex('e')
-    # g.add_vertex('f')
-    # g.add_vertex('g')
-    # g.add_vertex('h')
+  
 
     print(calculateDistance(125,350, 100, 150))
 
@@ -97,17 +116,108 @@ def update(dt):
     #     passenger_spawn = 0
 
 
+def get_rails():
+    rails = []
+
+    for v in g:
+        for w in v.get_connections():
+            vid = v.get_id()
+            wid = w.get_id()
+            rails.append((vid,wid))
+
+    paths = {}
+
+    for rail in rails:
+        paths[rail[0]] = []
+        
+    for rail in rails:
+        l = paths[rail[0]]
+        l.append(rail[1])
+    
+    return paths
+
+
+def find_path(start, end, path=[]):
+
+    paths = get_rails()
+
+    path = path + [start]
+    if start == end:
+        return path
+    if start not in paths:
+        return None
+    for node in paths[start]:
+        if node not in path:
+            newpath = find_path(node, end, path)
+            if newpath: return newpath
+    return None
+
+
+
+
+
+def calculate_path(g, passenger, station):
+
+
+    start = str(clip_to_station(station.location))
+    # destination shape
+    destination_shape = passenger.shape
+
+
+    # list of destination shapes
+    available_statges = get_stattions_by_shape(destination_shape)
+    # print(available_statges, start)
+
+    for stage in available_statges:
+        to = str(stage)
+        print("")
+        print(start, to)
+        
+        print("Path found",find_path(start, to))
+        if find_path(start, to) != None:
+            dijkstras.dijkstra(g, g.get_vertex('0'))
+            target = g.get_vertex(str('3'))
+            path = [target.get_id()]
+            print("this is paths",path)
+            dijkstras.shortest(target, path)
+            print ('The shortest path : %s' %(path[::-1]))
+            
+
+
+    return 2
+
+
+
+
+
+
 def train_stop(event):
+    
+    g = dijkstras.Graph()
+    
+       
+    for s in range(len(data.stations)):
+        g.add_vertex(str(s))
+
+
+    print(g.get_vertices())
+    # for v in g:
+    
+        # print(v.get_connections())
     station: Station = data.stations[event.station]
     train: Train = event.train
 
-    for passenger in station.passengers:
-        if passenger.should_embark():
-            train.embark.append(passenger)
+    print(station)
 
     for passenger in train.passengers:
+        # shortest_path = calculate_path(g, passenger, station)
         if passenger.should_disembark():
             train.disembark.append(passenger)
+    
+    for passenger in station.passengers:
+        shortest_path = calculate_path(g, passenger, station)
+        if passenger.should_embark():
+            train.embark.append(passenger)
 
 
 def left_click_down(event):
@@ -129,10 +239,11 @@ def left_click_up(event):
             x = data.tmp_segment.origin
             y = data.stations[s].location
             # str(clip_to_station(data.tmp_segment.origin)),str(s)
+           
             g.add_edge(str(clip_to_station(data.tmp_segment.origin)),str(s), calculateDistance(x[0],y[0],x[1],y[1]))  
             print(str(clip_to_station(data.tmp_segment.origin)),str(s))
             
-            # g.add_edge("1", "2", calculateDistance(x[0],y[0],x[1],y[1]))  
+            g.add_edge("1", "2", calculateDistance(x[0],y[0],x[1],y[1]))  
 
 
             # for v in g:
@@ -186,11 +297,11 @@ def left_click_up(event):
                 wid = w.get_id()
                 # if vid == start and wid == to:
                 print ('( %s , %s, %3d)'  % ( vid, wid, v.get_weight(w)))
-        dijkstras.dijkstra(g, g.get_vertex(start))
-        target = g.get_vertex(str(available_statges[0]))
-        path = [target.get_id()]
-        dijkstras.shortest(target, path)
-        print ('The shortest path : %s' %(path[::-1]))
+        # dijkstras.dijkstra(g, g.get_vertex(start))
+        # target = g.get_vertex(str(available_statges[0]))
+        # path = [target.get_id()]
+        # dijkstras.shortest(target, path)
+        # print ('The shortest path : %s' %(path[::-1]))
 
 
 def mouse_move(event):
@@ -268,8 +379,8 @@ dt = 0
 
 gui = setup_gui([1000, 900])
 
-g = dijkstras.Graph()
 
+g = dijkstras.Graph()
 
 setup()
 
