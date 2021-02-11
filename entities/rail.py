@@ -108,3 +108,9 @@ class Rail(object):
                 return True
 
         return self.segments[-1].stations[1] == i
+    
+    def start_station(self):
+        return self.segments[0].stations[0]
+
+    def end_station(self):
+        return self.segments[-1].stations[1]
