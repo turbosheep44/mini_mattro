@@ -8,7 +8,7 @@ class Passenger(object):
 
     def __init__(self, shape: Shape):
         self.shape = shape
-        # self.path = list[TrackSegment] = []
+        self.path = []
 
     def draw(self, surface, location, offset):
         location = Vector2(location.x + 25 + ((15 * offset)), location.y - 18)

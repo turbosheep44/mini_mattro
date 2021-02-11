@@ -37,8 +37,12 @@ class Train(object):
             passenger = self.disembark.pop()
             if passenger.shape != station.shape:
                 station.passengers.append(passenger)
+                self.passengers.remove(passenger)
+
             else:
                 pg.event.post(pg.event.Event(SCORE_POINT))
+                self.passengers.remove(passenger)
+
 
         # embark new passengers
         elif len(self.embark) > 0:

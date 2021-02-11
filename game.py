@@ -3,7 +3,7 @@ import random
 from pygame.constants import K_SPACE
 
 from gui import setup_gui
-from entities import TrackSegment, Station, Train, dijkstras
+from entities import TrackSegment, Station, Train, dijkstras, graph
 from util import *
 import math
 
@@ -14,7 +14,7 @@ import math
 def setup():
     data.stations = [Station(Shape.CIRCLE, Vector2(125, 100)),
                     #  Station(Shape.CIRCLE, Vector2(350, 150)),
-                    #  Station(Shape.CIRCLE, Vector2(300, 350)),
+                     Station(Shape.CIRCLE, Vector2(300, 350)),
                     #  Station(Shape.CIRCLE, Vector2(600, 650)),
                      Station(Shape.SQUARE, Vector2(400, 250)),
                     #  Station(Shape.SQUARE, Vector2(500, 500)),
@@ -28,6 +28,8 @@ def setup():
 
 
     data.stations[0].create_passenger(Shape.TRIANGLE)
+    data.stations[1].create_passenger(Shape.SQUARE)
+
 
     print(data.stations[0].passengers[0].shape)
 
@@ -157,67 +159,141 @@ def find_path(start, end, path=[]):
 
 
 def calculate_path(g, passenger, station):
-
-
+    print("Calculating Distance")
     start = str(clip_to_station(station.location))
-    # destination shape
+
+    # print("Current Position: ", start)
     destination_shape = passenger.shape
 
-
-    # list of destination shapes
     available_statges = get_stattions_by_shape(destination_shape)
-    # print(available_statges, start)
+
+    all_path_sums = []
 
     for stage in available_statges:
         to = str(stage)
         print("")
-        print(start, to)
+        print("Start: ",start,", End: ", to)
         
         print("Path found",find_path(start, to))
         if find_path(start, to) != None:
-            dijkstras.dijkstra(g, g.get_vertex('0'))
-            target = g.get_vertex(str('3'))
-            path = [target.get_id()]
-            print("this is paths",path)
-            dijkstras.shortest(target, path)
-            print ('The shortest path : %s' %(path[::-1]))
+
+            # dijkstras.dijkstra(g, g.get_vertex(str(start)))
+            # target = g.get_vertex(str(to))
+            # path = [target.get_id()]
+            # # print("this is paths",path)
+            # dijkstras.shortest(target, path)
+            # print ('The shortest path : %s' %(path[::-1]))
+
+            print("Path:",graph.dijsktra(g, str(start), str(to)))
+
+            path = graph.dijsktra(g, str(start), str(to))
+            path_sum = 0
+
+            for p in range(len(path)-1):
+                path_sum += graphnew.weights[(path[p],path[p+1])]
+
+            # for x in range(len(path[::-1])-1):
+            #     # print(g.get_vertex(path[x]).get_weight(g.get_vertex(path[x+1])))
+            #     # print(path[x], path[x+1])
+            #     path_sum += g.get_vertex(path[x]).get_weight(g.get_vertex(path[x+1]))
             
 
+            all_path_sums.append((path, path_sum))
+    
+    print("\n\n (Paths, Weights):   ", all_path_sums, "\n\n ")
 
-    return 2
+    if len(all_path_sums) > 0:  
+        shortest_path = sorted(all_path_sums, key=lambda tup: tup[1])[0][0]
+    
+        return shortest_path
+    else:
+        return []
 
 
+def pass_emb(shortest_path, passenger, train, station):
+ 
+    if len(shortest_path) == 0:
+        return False
+
+    seg = list(map(int, shortest_path))[:2]
+    seg.sort()
+
+    train_seg = list(train.current_segment.stations)
+    train_seg.sort()
+
+    print(seg, train_seg)
 
 
+    current_station = str(clip_to_station(station.location))
+    if seg == train_seg:
+        # passenger.path = shortest_path
+        return True
+    else:
+        return False
+
+
+def drop(passenger, station, train):
+    current_station = str(clip_to_station(station.location))
+
+    print("Current station: ", current_station)
+
+    # current_stop = passenger.path.index(str(clip_to_station(station.location)))
+    # (passenger.path).pop(0)
+
+    print("Journey: ", passenger.path)
+    # print("This is segment: ",train.current_segment.stations)
+
+    seg = list(map(int, passenger.path))[:2]
+    seg.sort()
+
+    train_seg = list(train.current_segment.stations)
+    train_seg.sort()
+
+    # print(seg, train_seg)
+
+    if seg != train_seg:
+        print("\n\nDropping passenger at station:", current_station)
+        return True
+    else:
+        return False
 
 
 def train_stop(event):
     
-    g = dijkstras.Graph()
-    
-       
-    for s in range(len(data.stations)):
-        g.add_vertex(str(s))
-
-
-    print(g.get_vertices())
+    # print(g.get_vertices())
     # for v in g:
+        # print(v.get_distance())
     
         # print(v.get_connections())
     station: Station = data.stations[event.station]
     train: Train = event.train
 
-    print(station)
+    print(train.position)
+    
+    temp_g = graphnew
+
 
     for passenger in train.passengers:
         # shortest_path = calculate_path(g, passenger, station)
-        if passenger.should_disembark():
-            train.disembark.append(passenger)
+        # shortest_path = calculate_path(temp_g, passenger, station)
+        # drop(temp_g, passenger, station, train)
+        shortest_path = calculate_path(temp_g, passenger, station)
+
+        # if drop( passenger, station, train):
+        if pass_emb(shortest_path, passenger, train, station) == False:
+            train.disembark.append(passenger)  
+            
+
     
     for passenger in station.passengers:
-        shortest_path = calculate_path(g, passenger, station)
-        if passenger.should_embark():
+        print("\nBOARDDING PASSENGER")
+        if len(passenger.path)>0:
+            shortest_path = passenger.path
+        else:
+            shortest_path = calculate_path(temp_g, passenger, station)
+        if pass_emb(shortest_path, passenger, train, station):
             train.embark.append(passenger)
+          
 
 
 def left_click_down(event):
@@ -243,7 +319,10 @@ def left_click_up(event):
             g.add_edge(str(clip_to_station(data.tmp_segment.origin)),str(s), calculateDistance(x[0],y[0],x[1],y[1]))  
             print(str(clip_to_station(data.tmp_segment.origin)),str(s))
             
-            g.add_edge("1", "2", calculateDistance(x[0],y[0],x[1],y[1]))  
+            
+            graphnew.add_edge(str(clip_to_station(data.tmp_segment.origin)),str(s), calculateDistance(x[0],y[0],x[1],y[1]))  
+
+            # g.add_edge("1", "2", calculateDistance(x[0],y[0],x[1],y[1]))  
 
 
             # for v in g:
@@ -381,6 +460,8 @@ gui = setup_gui([1000, 900])
 
 
 g = dijkstras.Graph()
+
+graphnew = graph.Graph()
 
 setup()
 
