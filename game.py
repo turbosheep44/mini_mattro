@@ -96,7 +96,7 @@ def train_stop(event):
     station: Station = data.stations[event.station]
     train: Train = event.train
 
-    if(len(event.train.passengers) < 7):
+    if(len(train.passengers) < 7):
 
         for passenger in station.passengers:
             print("Picking Up Someone")

@@ -158,10 +158,11 @@ def train_stop(event):
     station: Station = data.stations[event.station]
     train: Train = event.train
 
-    for passenger in station.passengers:
-        print("Picking Up Someone")
-        if passenger.should_embark():
-            train.embark.append(passenger)
+    if(len(train.passengers) < 7):
+        for passenger in station.passengers:
+            print("Picking Up Someone")
+            if passenger.should_embark():
+                train.embark.append(passenger)
 
     for passenger in train.passengers:
         if passenger.should_disembark(station.shape):
