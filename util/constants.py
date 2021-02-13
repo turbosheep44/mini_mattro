@@ -7,6 +7,7 @@ from typing import List
 SELECT_TRACK = pg.USEREVENT + 1
 SCORE_POINT = pg.USEREVENT + 2
 TRAIN_STOP = pg.USEREVENT + 3
+LOSE_POINT = pg.USEREVENT + 4
 
 # layout
 TOP = "top"

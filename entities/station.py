@@ -4,6 +4,7 @@ import pygame as pg
 from pygame.math import Vector2
 from math import ceil
 from typing import Tuple
+import time
 
 
 class Station(object):
@@ -13,9 +14,26 @@ class Station(object):
         self.location = location
         self.tracks = {}
         self.passengers: Passenger = []
+        self.loseTime = time.time()
+        self.losing = False
 
     def create_passenger(self, shape):
         self.passengers.append(Passenger(shape))
+
+    def update(self):
+        for p in self.passengers:
+            p.update()
+
+        if(self.losing):
+            if((int(time.time()-int(self.loseTime))) > 10):
+                print("GAME OVER")
+
+        if(len(self.passengers) >= 6 and not(self.losing)):
+            self.losing = True
+            self.loseTime = time.time()
+
+        if (len(self.passengers) < 6):
+            self.losing = False
 
     def draw(self, surface):
         for i, p in enumerate(self.passengers):

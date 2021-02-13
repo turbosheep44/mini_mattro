@@ -7,6 +7,7 @@ from gui import setup_gui
 from entities import TrackSegment, Station, Train
 from util import *
 
+
 def setup():
     data.stations = [Station(Shape.CIRCLE, Vector2(125, 100)),
                      Station(Shape.SQUARE, Vector2(500, 500)),
@@ -16,11 +17,13 @@ def setup():
     data.create_rail(gui)
     data.create_rail(gui)
 
+
 temp_count = 0
 
 
-sample_action = np.array([1,0,0,0,1,1,1,0,0])
-sample_action_two = np.array([1,0,0,1,1,0,1,0,0])
+sample_action = np.array([1, 0, 0, 0, 1, 1, 1, 0, 0])
+sample_action_two = np.array([1, 0, 0, 1, 1, 0, 1, 0, 0])
+
 
 def passenger(dt):
 
@@ -28,11 +31,11 @@ def passenger(dt):
     passenger_spawn += dt
 
     if passenger_spawn > 1:
-        
+
         # TEMPORARY STUFF
 
         global temp_count
-        temp_count =  temp_count + 1
+        temp_count = temp_count + 1
 
         if temp_count == 3:
             create_action(sample_action)
@@ -70,7 +73,7 @@ def create_rail(s1, s2, r):
 
         if rail.is_on_rail(s1) and rail.is_on_rail(s2):
             print("invalid")
-            return 
+            return
 
         if not rail.is_on_rail(s1) and not rail.is_on_rail(s2):
             print("invalid")
@@ -79,14 +82,14 @@ def create_rail(s1, s2, r):
         start = data.stations[rail.start_station()]
         end = data.stations[rail.end_station()]
 
-        if station_one in [start,end]:
+        if station_one in [start, end]:
 
             temp_segment = TrackSegment(rail.color, station_one.location, (s1, None))
             temp_segment.update_dst(data.stations, station_two.location, s2)
 
             rail.add_segment(temp_segment, data.stations)
 
-        if station_two in [start,end]:
+        if station_two in [start, end]:
 
             temp_segment = TrackSegment(rail.color, station_two.location, (s2, None))
             temp_segment.update_dst(data.stations, station_one.location, s1)
@@ -96,18 +99,17 @@ def create_rail(s1, s2, r):
 
 def create_action(action):
 
-    r = np.where(action[0:3]==1)[0][0]
+    r = np.where(action[0:3] == 1)[0][0]
 
-    s1 = np.where(action[3:-3]==1)[0][0]
-    s2 = np.where(action[3:-3]==1)[0][1]
+    s1 = np.where(action[3:-3] == 1)[0][0]
+    s2 = np.where(action[3:-3] == 1)[0][1]
 
     # TODO: Add Connect/Disconnect/ Do Nothing detection
 
-    create_rail(s1,s2,r)
+    create_rail(s1, s2, r)
 
 
-
-def update(dt,action = None):
+def update(dt, action=None):
     gui.update(dt)
 
     for event in pg.event.get():
@@ -128,6 +130,10 @@ def update(dt,action = None):
         elif event.type == SCORE_POINT:
             data.score += 1
             gui.set_score(data.score)
+        elif event.type == LOSE_POINT:
+            print("losing point")
+            data.score -= 1
+            gui.set_score(data.score)
         elif event.type == TRAIN_STOP:
             train_stop(event)
         elif event.type == pg.KEYDOWN:
@@ -136,16 +142,17 @@ def update(dt,action = None):
 
     for r in data.rails:
         r.update(dt, data)
-        
+
     global passenger_spawn
     passenger_spawn += dt
 
-    
+
 def remove_segment(event):
     if(event.key == pg.K_UP):
         data.active_rail.remove_segment(data.active_rail.segments[-1])
     elif(event.key == pg.K_DOWN):
         data.active_rail.remove_segment(data.active_rail.segments[0])
+
 
 def train_stop(event):
     station: Station = data.stations[event.station]
@@ -193,7 +200,7 @@ def mouse_move(event):
 
 
 def clip_to_station(pt):
-    
+
     # clip to station first
     for i, s in enumerate(data.stations):
         if s.contains(pt):
@@ -236,15 +243,12 @@ def reset():
 
     for station in data.stations:
         station.passengers = []
-    
+
     for rail in data.rails:
         rail.segments = []
         rail.trains = []
-    
-
 
     # dt = clock.tick(60)
-
 pg.init()
 pg.font.init()
 pg.display.set_caption("MiniMattro")

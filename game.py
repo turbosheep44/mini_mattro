@@ -25,6 +25,7 @@ def setup():
 
 # ############## GAME ################
 
+
 def passenger(dt):
     global passenger_spawn
     passenger_spawn += dt
@@ -39,10 +40,13 @@ def passenger(dt):
 
         randomStation.create_passenger(randomPassenger)
         passenger_spawn = 0
-    
+
 
 def update(dt):
     gui.update(dt)
+
+    for x in data.stations:
+        x.update()
 
     for event in pg.event.get():
         if gui.process_event(event):
@@ -59,7 +63,12 @@ def update(dt):
         elif event.type == SELECT_TRACK:
             data.set_active_rail(event.track)
         elif event.type == SCORE_POINT:
+            print("getting point")
             data.score += 1
+            gui.set_score(data.score)
+        elif event.type == LOSE_POINT:
+            print("losing point")
+            data.score -= 1
             gui.set_score(data.score)
         elif event.type == TRAIN_STOP:
             train_stop(event)
@@ -68,27 +77,31 @@ def update(dt):
 
     for r in data.rails:
         r.update(dt, data)
-        
+
     global passenger_spawn
     passenger_spawn += dt
     # if passenger_spawn > 1:
     #     random.choice(data.stations).create_passenger(random.choice(list(Shape)))
     #     passenger_spawn = 0
-    
+
+
 def remove_segment(event):
     if(event.key == pg.K_UP):
         data.active_rail.remove_segment(data.active_rail.segments[-1])
     elif(event.key == pg.K_DOWN):
         data.active_rail.remove_segment(data.active_rail.segments[0])
 
+
 def train_stop(event):
     station: Station = data.stations[event.station]
     train: Train = event.train
 
-    for passenger in station.passengers:
-        print("Picking Up Someone")
-        if passenger.should_embark():
-            train.embark.append(passenger)
+    if(len(event.train.passengers) < 7):
+
+        for passenger in station.passengers:
+            print("Picking Up Someone")
+            if passenger.should_embark():
+                train.embark.append(passenger)
 
     for passenger in train.passengers:
         if passenger.should_disembark(station.shape):
@@ -127,7 +140,7 @@ def mouse_move(event):
 
 
 def clip_to_station(pt):
-    
+
     # clip to station first
     for i, s in enumerate(data.stations):
         if s.contains(pt):
