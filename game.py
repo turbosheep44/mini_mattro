@@ -27,11 +27,11 @@ def setup():
 
 
 
-    data.stations[0].create_passenger(Shape.TRIANGLE)
-    data.stations[1].create_passenger(Shape.SQUARE)
+    # data.stations[0].create_passenger(Shape.TRIANGLE)
+    # data.stations[1].create_passenger(Shape.SQUARE)
 
 
-    print(data.stations[0].passengers[0].shape)
+    # print(data.stations[0].passengers[0].shape)
 
     # print(get_stattions_by_shape(Shape.TRIANGLE))
 
@@ -104,19 +104,20 @@ def update(dt):
             data.score += 1
             gui.set_score(data.score)
         elif event.type == TRAIN_STOP:
-            train_stop(event)
+            train_stop(event, data)
 
     for r in data.rails:
+        # for s in r.segments:
+
+            # print(s.stations)
         r.update(dt, data)
 
-    
 
     global passenger_spawn
     # passenger_spawn += dt
     # if passenger_spawn > 1:
     #     random.choice(data.stations).create_passenger(random.choice(list(Shape)))
     #     passenger_spawn = 0
-
 
 def get_rails():
     rails = []
@@ -126,6 +127,8 @@ def get_rails():
             vid = v.get_id()
             wid = w.get_id()
             rails.append((vid,wid))
+    # rails.append((2,4))
+    # rails.append((4,3))
 
     paths = {}
 
@@ -138,6 +141,7 @@ def get_rails():
     
     return paths
 
+# print(get_rails())
 
 def find_path(start, end, path=[]):
 
@@ -155,26 +159,23 @@ def find_path(start, end, path=[]):
     return None
 
 
-
-
-
-def calculate_path(g, passenger, station):
+def calculate_path(g, passenger, station, train, railway):
     print("Calculating Distance")
     start = str(clip_to_station(station.location))
 
     # print("Current Position: ", start)
-    destination_shape = passenger.shape
+    # destination_shape = passenger.shape
+    destination_shape = Shape.SQUARE
 
     available_statges = get_stattions_by_shape(destination_shape)
-
     all_path_sums = []
 
     for stage in available_statges:
         to = str(stage)
-        print("")
-        print("Start: ",start,", End: ", to)
+        # print("")
+        # print("Start: ",start,", End: ", to)
         
-        print("Path found",find_path(start, to))
+        # print("Path found",find_path(start, to))
         if find_path(start, to) != None:
 
             # dijkstras.dijkstra(g, g.get_vertex(str(start)))
@@ -184,23 +185,22 @@ def calculate_path(g, passenger, station):
             # dijkstras.shortest(target, path)
             # print ('The shortest path : %s' %(path[::-1]))
 
-            print("Path:",graph.dijsktra(g, str(start), str(to)))
+            # print("Path:",graph.dijsktra(g, str(start), str(to)))
 
             path = graph.dijsktra(g, str(start), str(to))
             path_sum = 0
 
             for p in range(len(path)-1):
                 path_sum += graphnew.weights[(path[p],path[p+1])]
-
             # for x in range(len(path[::-1])-1):
             #     # print(g.get_vertex(path[x]).get_weight(g.get_vertex(path[x+1])))
             #     # print(path[x], path[x+1])
             #     path_sum += g.get_vertex(path[x]).get_weight(g.get_vertex(path[x+1]))
             
-
+            add_train_travel(path, path_sum, train, railway)
             all_path_sums.append((path, path_sum))
     
-    print("\n\n (Paths, Weights):   ", all_path_sums, "\n\n ")
+    print("\n (Paths, Weights):   ", all_path_sums, "\n\n ")
 
     if len(all_path_sums) > 0:  
         shortest_path = sorted(all_path_sums, key=lambda tup: tup[1])[0][0]
@@ -208,6 +208,165 @@ def calculate_path(g, passenger, station):
         return shortest_path
     else:
         return []
+
+
+def add_train_travel(path, path_sum, train, railway):
+    # print("\nPOSITION",train.position)
+    # print("Direction",train.direction)
+    # print("Segment",(train.current_segment.stations))
+
+
+    current_seg = list(train.current_segment.stations)
+    path_seg = [int(i) for i in path][:2]
+    path_direction = 0
+
+    # print("cur seg, path seg", current_seg , path_seg)
+    # print("cur seg contains path seg", set(current_seg).issubset(path_seg))
+
+    # print(railway.index(4))
+    # print(railway.index(2))
+
+    print(railway,path_seg)
+
+    dep = path_seg[0]
+    arr = path_seg[1]
+    
+    if train.direction == 1:
+        next_station = (train.current_segment.stations)[1]
+        print("----Next Station ----", next_station)
+    else:
+        next_station = (train.current_segment.stations)[0]
+        print("----Next Station ----", next_station)
+
+
+    if railway.index(dep) < railway.index(arr):
+        path_direction = 1
+
+
+        if (railway.index(next_station) > railway.index(dep)) and path_direction == train.direction:
+            whole_route(train, railway, next_station, dep, path_sum)
+
+        # elif railway.index(next_station) < railway.index(dep):
+        elif train.direction != path_direction:
+            soon(train, railway, next_station, dep, path_sum)
+
+
+        elif (railway.index(next_station) <= railway.index(dep)) and path_direction == train.direction:
+            coming(train, railway, next_station, dep, path_sum)
+
+
+    else:
+        path_direction = -1
+    
+    # print("Path Direction", path_direction)
+
+
+
+def whole_route(train, railway, next_station, dep, path_sum):
+
+    direction = train.direction
+    railway_sum = 0
+
+    for s in range(len(railway)-1):
+        railway_sum += graphnew.weights[(str(railway[s]),str(railway[s+1]))]
+    # print("uPDATE 1: ", railway_sum)
+
+    current_seg = train.current_segment.stations
+    pos = train.position
+    railway_sum += (graphnew.weights[(str(current_seg[0]),str(current_seg[1]))] * (1-pos))
+    # print("uPdate1.1: ", railway_sum, "added, ", (graphnew.weights[(str(current_seg[0]),str(current_seg[1]))] * (1-pos)))
+
+
+    if direction == 1:
+        # if len(railway[railway.index(next_station):]) > 1:
+        # print("li jmiss", railway[railway.index(next_station):])
+        # print((str(railway[railway.index(next_station)+0]),str(railway[railway.index(next_station)+1])))
+
+        for s in range(len(railway[railway.index(next_station):])-1):
+            railway_sum += graphnew.weights[(str(railway[railway.index(next_station)+s]),str(railway[railway.index(next_station)+s+1]))]
+        #     print("adding", graphnew.weights[(str(railway[s]),str(railway[s+1]))])
+        # print("uPDATE 2: ", railway_sum)
+
+        # else:
+        #     seg = train.current_segment.stations
+        #     pos = train.position
+        #     railway_sum += (graphnew.weights[(str(seg[0]),str(seg[1]))] * (1-pos))
+        #     print("this is testing", seg, next_station, railway_sum, "adding: ", graphnew.weights[(str(seg[0]),str(seg[1]))])
+
+        #     # railway_sum += graphnew.weights[(railway[-2],railway[-1])]
+        #     print("uPDATE 3: ", railway_sum)
+
+
+        for s in range(len(railway[:railway.index(dep)])):
+            railway_sum += graphnew.weights[(str(railway[s]),str(railway[s+1]))]
+            # print( "adding", graphnew.weights[(str(railway[s]),str(railway[s+1]))])
+    
+        # print("uPDATE 4: ", railway_sum)
+
+    railway_sum += path_sum
+
+
+    print("WHOLE ROUTEEEEEEEEEEEEEE:   ", railway_sum)
+
+
+def soon(train, railway, next_station, dep, path_sum):
+    print("\n---- Soon ----")
+
+    direction = train.direction
+    railway_sum = 0
+
+    
+    current_seg = train.current_segment.stations
+    pos = train.position
+    railway_sum += (graphnew.weights[(str(current_seg[0]),str(current_seg[1]))] * (1-pos))
+    # print("uPdate1.1: ", railway_sum, "added, ", (graphnew.weights[(str(current_seg[0]),str(current_seg[1]))]))
+
+
+    # print(railway[:railway.index(next_station)],len(railway[:railway.index(next_station)])-1)
+
+
+    # NAHSEB TRID TAMEL len() -1 
+    for s in range(len(railway[:railway.index(next_station)+1])):
+        railway_sum += graphnew.weights[(str(railway[s]),str(railway[s+1]))]
+        # print("adding", graphnew.weights[(str(railway[s]),str(railway[s+1]))])
+        # print("uPDATE 2: ", railway_sum)
+
+    for s in range(len(railway[:railway.index(dep)])):
+        railway_sum += graphnew.weights[(str(railway[s]),str(railway[s+1]))]
+        # print( "adding", graphnew.weights[(str(railway[s]),str(railway[s+1]))])
+
+    # print("uPDATE 4: ", railway_sum)
+
+    railway_sum += path_sum
+    
+    print("WHOLE ROUTEEEEEEEEEEEEEE:   ", railway_sum)
+
+
+    
+def coming(train, railway, next_station, dep, path_sum):
+    print("\n---- Comming ----")
+
+    direction = train.direction
+    railway_sum = 0
+
+    current_seg = train.current_segment.stations
+    pos = train.position
+    railway_sum += (graphnew.weights[(str(current_seg[0]),str(current_seg[1]))] * (1-pos))
+
+
+    print(railway.index(next_station),railway.index(dep))
+    for s in range(len(railway[railway.index(next_station):railway.index(dep)])):
+        railway_sum += graphnew.weights[(str(railway[s]),str(railway[s+1]))]
+        # print("adding", graphnew.weights[(str(railway[s]),str(railway[s+1]))])
+        # print("uPDATE 2: ", railway_sum)
+
+
+    railway_sum += path_sum
+
+
+    print("WHOLE ROUTEEEEEEEEEEEEEE:   ", railway_sum)
+
+
 
 
 def pass_emb(shortest_path, passenger, train, station):
@@ -258,8 +417,32 @@ def drop(passenger, station, train):
         return False
 
 
-def train_stop(event):
+def train_stop(event, data):
+   
+
+    # print(graphnew.weights[("3","4")])
+    # print("xdd",graphnew.weights[("3","1")])
+    # print(graphnew.weights[("2","0")])
+
+
+
+    # print("THIS IS DISTANCE", (data.stations[0].location).distance_to(data.stations[1].location))
     
+    # print(list2[list2.index('4')+1])
+    # print("NANNUU",all(i in list2 for i in list1))
+    railway_segments = []
+    for count, r in enumerate(data.rails):
+        railway_segments.append([])
+
+        for idx,s in enumerate(r.segments):
+            railway_segments[count].append(s.stations[0])
+            if idx == len(r.segments)-1:
+                railway_segments[count].append(s.stations[1])
+            # print(s.stations)
+
+    # print(railway_segments)
+    
+
     # print(g.get_vertices())
     # for v in g:
         # print(v.get_distance())
@@ -268,10 +451,21 @@ def train_stop(event):
     station: Station = data.stations[event.station]
     train: Train = event.train
 
-    print(train.position)
+    # print("\nPOSITION",train.position)
+    # print("Direction",train.direction)
+    # print("Segment",(train.current_segment.stations))
+
+  
+
+    # print(station.tracks)
+
+    # for rail in data.rails:
+    #     print("RAIL: " + str(rail.segments[0].origin))
+
     
     temp_g = graphnew
 
+    shortest_path = calculate_path(temp_g, data, data.stations[4], train, railway_segments[0])
 
     for passenger in train.passengers:
         # shortest_path = calculate_path(g, passenger, station)
@@ -319,8 +513,8 @@ def left_click_up(event):
             g.add_edge(str(clip_to_station(data.tmp_segment.origin)),str(s), calculateDistance(x[0],y[0],x[1],y[1]))  
             print(str(clip_to_station(data.tmp_segment.origin)),str(s))
             
-            
-            graphnew.add_edge(str(clip_to_station(data.tmp_segment.origin)),str(s), calculateDistance(x[0],y[0],x[1],y[1]))  
+            # graphnew.add_edge(str(clip_to_station(data.tmp_segment.origin)),str(s), calculateDistance(x[0],y[0],x[1],y[1]))  
+            graphnew.add_edge(str(clip_to_station(data.tmp_segment.origin)),str(s), (x).distance_to(y))  
 
             # g.add_edge("1", "2", calculateDistance(x[0],y[0],x[1],y[1]))  
 

@@ -87,6 +87,6 @@ class Train(object):
 
     def draw(self, surface):
         pt, dv = self.current_segment.lerp_position(self.position)
-        # print(self.direction, self.position)
+        # print(self.direction, self.position, self.current_segment.stations,  self.current_segment.color)
         dv.scale_to_length(30)
         ortholine(surface, (255, 255, 255), pt - (dv/2), pt + (dv/2), 15)
