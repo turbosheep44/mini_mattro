@@ -1,6 +1,6 @@
 * `game_human.py` is the human playable version of the game. `play_step()` does not take any action and operates similarly to the update function in the old format (found in `store/game.py`). In this case `play_step()` returns a `game_over` variable.
   
-* `game_ai.py` is the AI version of the game, where an action is to be given to the `play_step()` function. It returns the reward, game_over, and score. 
+* `game_ai.py` is the AI version of the game, where an action is to be given to the `play_step(action)` function. It returns the reward, game_over, and score. 
 
 > The action is in the following format: [ MODE | STATIONS | RAILS]. For example:
 >
