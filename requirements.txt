@@ -7,3 +7,4 @@ pyflakes==2.2.0
 pygame==2.0.0
 toml==0.10.2
 zipp==3.4.0
+torch==1.7.1
