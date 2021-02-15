@@ -318,15 +318,15 @@ def soon(train, railway, next_station, dep, path_sum):
     
     current_seg = train.current_segment.stations
     pos = train.position
-    railway_sum += (graphnew.weights[(str(current_seg[0]),str(current_seg[1]))] * (1-pos))
-    # print("uPdate1.1: ", railway_sum, "added, ", (graphnew.weights[(str(current_seg[0]),str(current_seg[1]))]))
+    railway_sum += (graphnew.weights[(str(current_seg[0]),str(current_seg[1]))] * (pos))
+    print("uPdate1.1: ", railway_sum, "added, ", (graphnew.weights[(str(current_seg[0]),str(current_seg[1]))]) ," poss", pos)
 
 
     # print(railway[:railway.index(next_station)],len(railway[:railway.index(next_station)])-1)
 
 
     # NAHSEB TRID TAMEL len() -1 
-    for s in range(len(railway[:railway.index(next_station)+1])):
+    for s in range(len(railway[:railway.index(next_station)])):
         railway_sum += graphnew.weights[(str(railway[s]),str(railway[s+1]))]
         # print("adding", graphnew.weights[(str(railway[s]),str(railway[s+1]))])
         # print("uPDATE 2: ", railway_sum)
@@ -440,7 +440,7 @@ def train_stop(event, data):
                 railway_segments[count].append(s.stations[1])
             # print(s.stations)
 
-    # print(railway_segments)
+    print(railway_segments)
     
 
     # print(g.get_vertices())
@@ -450,6 +450,13 @@ def train_stop(event, data):
         # print(v.get_connections())
     station: Station = data.stations[event.station]
     train: Train = event.train
+
+    trains = []
+    for r in data.rails:
+        for t in r.trains:
+            trains.append(t)
+            
+    print("THIS IS TRAINS BRROOO",trains)
 
     # print("\nPOSITION",train.position)
     # print("Direction",train.direction)
@@ -464,30 +471,31 @@ def train_stop(event, data):
 
     
     temp_g = graphnew
+    if train == trains[1]:
+        shortest_path = calculate_path(temp_g, data, data.stations[4], trains[0], railway_segments[0])
 
-    shortest_path = calculate_path(temp_g, data, data.stations[4], train, railway_segments[0])
-
-    for passenger in train.passengers:
-        # shortest_path = calculate_path(g, passenger, station)
-        # shortest_path = calculate_path(temp_g, passenger, station)
-        # drop(temp_g, passenger, station, train)
-        shortest_path = calculate_path(temp_g, passenger, station)
-
-        # if drop( passenger, station, train):
-        if pass_emb(shortest_path, passenger, train, station) == False:
-            train.disembark.append(passenger)  
-            
-
-    
-    for passenger in station.passengers:
-        print("\nBOARDDING PASSENGER")
-        if len(passenger.path)>0:
-            shortest_path = passenger.path
-        else:
+    if False:
+        for passenger in train.passengers:
+            # shortest_path = calculate_path(g, passenger, station)
+            # shortest_path = calculate_path(temp_g, passenger, station)
+            # drop(temp_g, passenger, station, train)
             shortest_path = calculate_path(temp_g, passenger, station)
-        if pass_emb(shortest_path, passenger, train, station):
-            train.embark.append(passenger)
-          
+
+            # if drop( passenger, station, train):
+            if pass_emb(shortest_path, passenger, train, station) == False:
+                train.disembark.append(passenger)  
+                
+
+        
+        for passenger in station.passengers:
+            print("\nBOARDDING PASSENGER")
+            if len(passenger.path)>0:
+                shortest_path = passenger.path
+            else:
+                shortest_path = calculate_path(temp_g, passenger, station)
+            if pass_emb(shortest_path, passenger, train, station):
+                train.embark.append(passenger)
+            
 
 
 def left_click_down(event):
