@@ -24,5 +24,8 @@ class Data(object):
 
         gui.append_rail(self.rails[-1])
 
+    def reset_color(self):
+        Data.NEXT_COLOR = 0
+
 
 data = Data()

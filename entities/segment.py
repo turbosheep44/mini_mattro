@@ -216,12 +216,23 @@ class TrackSegment(object):
             position = 0.999
 
         i = 0
-        while position > self.lengths[i]:
-            position -= self.lengths[i]
-            i += 1
+        try:
+            while position > self.lengths[i]:
+                position -= self.lengths[i]
+                i += 1
+        except IndexError:
+            #! AI causes this index error, not sure why
+            print("Index Error")
+            i -= 1
 
         # train is between points i and i+1, (position*100 / self.lengths[i])% of the way
         dv = self.vectors[i]
-        dv.scale_to_length(position)
+
+        try:
+            dv.scale_to_length(position)
+        except ValueError:
+            #! AI causes this value error, not sure why
+            print("Value Error")
+        
         pt = self.pts[i] + dv
         return pt, dv

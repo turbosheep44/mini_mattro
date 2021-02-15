@@ -26,7 +26,7 @@ class Station(object):
 
         if(self.losing):
             if((int(time.time()-int(self.loseTime))) > 10):
-                print("GAME OVER")
+                return True
 
         if(len(self.passengers) >= 6 and not(self.losing)):
             self.losing = True

@@ -21,8 +21,6 @@ class Passenger(object):
 
     def should_disembark(self, shape) -> bool:
         if self.shape == shape:
-            print("self.shape = " + str(self.shape))
-            print("station.shape= " + str(shape))
             return True
         else:
             return False
@@ -30,7 +28,6 @@ class Passenger(object):
     def update(self):
 
         if(((int(time.time())-int(self.startTime)) > 5)and not self.penalised):
-            print("We should lose a point")
             self.penalised = True
             self.startTime = time.time()
             pg.event.post(pg.event.Event(LOSE_POINT))

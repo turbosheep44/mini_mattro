@@ -85,5 +85,9 @@ class Train(object):
 
     def draw(self, surface):
         pt, dv = self.current_segment.lerp_position(self.position)
-        dv.scale_to_length(30)
+        try:
+            dv.scale_to_length(30)
+        except ValueError:
+            #! AI causes this value error, not sure why
+            print("Value Error: Cannot scale a vector with zero length")
         ortholine(surface, (255, 255, 255), pt - (dv/2), pt + (dv/2), 15)

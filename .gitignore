@@ -5,4 +5,4 @@ exercises/
 
 __pycache__/
 *.pyc
-run.bat
+plots/*

@@ -10,7 +10,7 @@ class Rail(object):
         self.color = color
         self.segments: list[TrackSegment] = []
         self.trains: list[Train] = []
-        self.todelete: bool = False
+        # OLD LOGIC: self.todelete: bool = False
 
     def __str__(self):
         if len(self.segments) != 0:
@@ -21,6 +21,8 @@ class Rail(object):
         for train in self.trains:
             train.update(dt, data)
 
+            # TODO: Disembarking passengers when rail does not exist logic
+            ''' OLD LOGIC:
             if self.todelete and train.is_stopped:
                 print("Disembarking passengers")
                 station = data.stations[train.stopped_station]
@@ -33,6 +35,7 @@ class Rail(object):
                 
                 self.trains = []
                 self.todelete = False
+            '''
 
     def draw(self, layers):
         for segment in self.segments:
@@ -47,9 +50,9 @@ class Rail(object):
 
         self.segments.remove(segment)
 
-        if len(self.segments) == 0:
-            self.todelete = True
-        elif len(self.segments) == 1:
+        # OLD LOGIC: if len(self.segments) == 0:
+            # self.todelete = True
+        if len(self.segments) == 1:
             self.segments[0].previous, self.segments[0].next = None, None
         else:
             first, last = self.segments[0], self.segments[-1]

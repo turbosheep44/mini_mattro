@@ -1,0 +1,1 @@
+These files are old-formats of both the AI and human-playable version of the game. If the old format of the human-playable version were to be played (game.py) then it should be moved in the root directory.
