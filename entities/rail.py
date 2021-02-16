@@ -53,12 +53,11 @@ class Rail(object):
             self.segments.remove(remove)
 
             # mark for full deletion later (in update)
-            remove.should_delete = True
             self.destroyed_segments.append(remove)
 
-        # if required, make a new segment to bridge the gap
+        # if this was not an end station, make a new segment to bridge the gap
         new_segment = None
-        if to_remove[0].previous and to_remove[-1].next:
+        if len(to_remove) == 2:
             start = to_remove[0].stations[0]
             end = to_remove[-1].stations[-1]
             new_segment = TrackSegment(self, stations[start].location, (start, None))
@@ -72,6 +71,12 @@ class Rail(object):
                     break
             self.segments.insert(insert_at, new_segment)
             new_segment.realise(stations)
+
+            # solve the edge case when there the station removed is the penultimate in the line
+            if not to_remove[0].previous:
+                to_remove[0].end_of_line_jump = new_segment
+            if not to_remove[1].next:
+                to_remove[1].end_of_line_jump = new_segment
 
         # replace connections of other segments with a connection to new segment (or None)
         if to_remove[0].previous:

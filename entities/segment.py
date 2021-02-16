@@ -17,7 +17,7 @@ class TrackSegment(object):
         self.stations = stations
         self.rail: Rail = rail
 
-        self.should_delete: bool = False
+        self.end_of_line_jump: TrackSegment = None
         self.is_realised: bool = False
         self.length: float = -1
         self.lengths: 'list[float]' = []
@@ -200,7 +200,6 @@ class TrackSegment(object):
         if not len(self.pts):
             return
 
-        color = self.rail.color if not self.should_delete else ()
         for start, end in zip(self.pts, self.pts[1:]):
             ortholine(surface, self.rail.color, start, end, 10, rounded=True)
 
@@ -259,7 +258,7 @@ class TrackSegment(object):
             return self.previous, direction
 
         # end of line, turn around
-        return self, direction * -1
+        return (self.end_of_line_jump or self), direction * -1
 
     def required_by_train(self):
         for train in self.rail.trains:
