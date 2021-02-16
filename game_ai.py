@@ -193,8 +193,8 @@ class MiniMetroGameAI:
                 rail.add_segment(temp_segment, data.stations)
 
     def disconnect_segment(self, station, rail):
-        if rail.can_remove_station(station):
-            rail.remove_station(station)
+        if data.rails[rail].can_remove_station(station):
+            data.rails[rail].remove_station(station)
 
     def draw(self):
 
