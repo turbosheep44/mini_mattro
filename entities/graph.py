@@ -29,6 +29,7 @@ def dijsktra(graph, initial, end):
     while current_node != end:
         visited.add(current_node)
         destinations = graph.edges[current_node]
+        print(current_node, end, destinations)
         weight_to_current_node = shortest_paths[current_node][1]
 
         for next_node in destinations:
@@ -60,30 +61,40 @@ def dijsktra(graph, initial, end):
 graph = Graph()
 
 edges = [
-    ('X', 'A', 7),
-    ('A', 'B', 3),
-    ('A', 'D', 4),
-    ('B', 'D', 4),
-    ('B', 'H', 5),
-    ('C', 'L', 2),
-    ('D', 'F', 1),
-    ('F', 'H', 3),
-    ('G', 'H', 2),
-    ('G', 'Y', 2),
-    ('I', 'J', 6),
-    ('I', 'K', 4),
-    ('I', 'L', 4),
-    ('J', 'L', 1),
-    ('K', 'Y', 5),
+    # ('X', 'A', 7),
+    # ('A', 'B', 3),
+    # ('A', 'D', 4),
+    # ('B', 'D', 4),
+    # ('B', 'H', 5),
+    # ('C', 'L', 2),
+    # ('D', 'F', 1),
+    # ('F', 'H', 3),
+    # ('G', 'H', 2),
+    # ('G', 'Y', 2),
+    # ('I', 'J', 6),
+    # ('I', 'K', 4),
+    # ('I', 'L', 4),
+    # ('J', 'L', 1),
+    # ('K', 'Y', 5),
+
+
+    ( '1' , '2', 158),
+    ( '2' , '0', 152),
+    ( '3' , '4', 380),
+    ( '4' , '2', 212),
+    ( '1' , '3', 212),
+
 ]
+
 
 for edge in edges:
     graph.add_edge(*edge)
+print("all",graph.edges['2'])
 
-graph.add_edge('X', 'A', 100)
+graph.add_edge('4', 'A', 100)
 
-print(dijsktra(graph, 'X', 'Y'))
-path = dijsktra(graph, 'X', 'Y')
+print("short",dijsktra(graph, '0', '4'))
+path = dijsktra(graph, '0', '4')
 path_sum = 0
 
 for p in range(len(path)-1):
@@ -92,4 +103,6 @@ for p in range(len(path)-1):
 
 
 print(path_sum)
+
+
 
