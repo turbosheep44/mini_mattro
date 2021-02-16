@@ -78,9 +78,6 @@ class MiniMetroGame:
             elif event.type == SCORE_POINT:
                 data.score += 1
                 self.gui.set_score(data.score)
-            elif event.type == LOSE_POINT:
-                data.score -= 1
-                self.gui.set_score(data.score)
             elif event.type == TRAIN_STOP:
                 self.train_stop(event)
 

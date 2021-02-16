@@ -24,8 +24,8 @@ class Station(object):
         self.passengers.append(Passenger(shape))
 
     def update(self):
-        for p in self.passengers:
-            p.update()
+        # for p in self.passengers:
+        #     p.update()
 
         if(self.losing):
             if time() - self.loseTime > LOSE_DELAY:

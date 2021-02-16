@@ -26,12 +26,10 @@ class Passenger(object):
         else:
             return False
 
-    def update(self):
-
-        if time()-self.startTime > 5 and not self.penalised:
-            self.penalised = True
-            self.startTime = time()
-            pg.event.post(pg.event.Event(LOSE_POINT))
-
-        if time()-self.startTime > 5 and self.penalised:
-            self.penalised = False
+    # def update(self):
+    #     if time()-self.startTime > 5 and not self.penalised:
+    #         self.penalised = True
+    #         self.startTime = time()
+    #         pg.event.post(pg.event.Event(LOSE_POINT))
+    #     if time()-self.startTime > 5 and self.penalised:
+    #         self.penalised = False
