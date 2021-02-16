@@ -192,28 +192,9 @@ class MiniMetroGameAI:
 
                 rail.add_segment(temp_segment, data.stations)
 
-    # TODO: To possibly update once disconnect segment logic is finished
-    def disconnect_segment(self, s, r):
-        '''OLD LOGIC:
-        s1, s2 = s
-        stations = (data.stations[s1], data.stations[s2])
-        rail = data.rails[r]
-
-        try:
-            first_segment = rail.segments[0]
-            last_segment = rail.segments[-1]
-        except IndexError:
-            #print("AI has chosen to disconnect a segment from a rail that has no segments!")
-            return
-
-        if (s1, s2) == first_segment.stations or (s2, s1) == first_segment.stations:
-            rail.remove_segment(first_segment)
-        elif (s2, s1) == last_segment.stations or (s2, s1) == last_segment.stations:
-            rail.remove_segment(last_segment)
-        else:
-            #print("AI has chosen an invalid action!")
-            return
-        '''
+    def disconnect_segment(self, station, rail):
+        if rail.can_remove_station(station):
+            rail.remove_station(station)
 
     def draw(self):
 
