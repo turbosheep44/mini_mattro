@@ -6,8 +6,8 @@ class Data(object):
     NEXT_COLOR = 0
 
     def __init__(self):
-        self.stations: list[Station] = []
-        self.rails: list[Rail] = []
+        self.stations: 'list[Station]' = []
+        self.rails: 'list[Rail]' = []
 
         self.tmp_segment: TrackSegment = None
         self.active_rail: Rail = None
@@ -26,6 +26,11 @@ class Data(object):
 
     def reset_color(self):
         Data.NEXT_COLOR = 0
+
+    def trains(self):
+        for r in self.rails:
+            for t in r.trains:
+                yield t
 
 
 data = Data()

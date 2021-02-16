@@ -1,3 +1,7 @@
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from entities.rail import Rail
+
 from util.draw import ortholine
 from pygame.math import Vector2
 from typing import Tuple
@@ -7,21 +11,22 @@ from typing import List
 
 
 class TrackSegment(object):
-    def __init__(self, color, origin, stations: Tuple[int, int]):
+    def __init__(self, rail, origin, stations: Tuple[int, int]):
         self.origin: Vector2 = Vector2(origin)
         self.dst: Vector2 = Vector2(0, 0)
         self.stations = stations
-        self.color = color
+        self.rail: Rail = rail
 
+        self.should_delete: bool = False
         self.is_realised: bool = False
         self.length: float = -1
-        self.lengths: list[float] = []
-        self.vectors: list[Vector2] = []
+        self.lengths: 'list[float]' = []
+        self.vectors: 'list[Vector2]' = []
         self.position_update: float = 0
         self.previous: TrackSegment = None
         self.next: TrackSegment = None
 
-        self.pts: list[Vector2] = []
+        self.pts: 'list[Vector2]' = []
 
     def update_dst(self, stations: List[Station], dst, station: int):
         """
@@ -128,7 +133,7 @@ class TrackSegment(object):
 
         return Vector2(CARDINALS[smallest[0][0]]), Vector2(CARDINALS[smallest[1][0]])
 
-    def recalculate_offsets(self, stations, isFinal: bool = False):
+    def recalculate_offsets(self, stations: 'list[Station]', isFinal: bool = False):
         # if the cardinals are opposite (straight line track), then force the offsets to be identical
         # this only actually matters if there is a second station involved
         if self.stations[1] != None and self.cardinals[0].rotate(180) == self.cardinals[1]:
@@ -168,6 +173,13 @@ class TrackSegment(object):
         else:
             return pt + ((amount*-10), 0)
 
+    def free_offsets(self, stations: 'list[Station]'):
+        """
+        used to tell the stations which this segment connects to that the offsets it used are no longer in use
+        """
+        stations[self.stations[0]].free_offset(self.cardinals[0], self.start_offset)
+        stations[self.stations[1]].free_offset(self.cardinals[1], self.end_offset)
+
     def realise(self, stations: List[Station]):
         """
         realise recalculates and locks in the co-ordinates of the track segment
@@ -186,14 +198,9 @@ class TrackSegment(object):
         if not len(self.pts):
             return
 
+        color = self.rail.color if not self.should_delete else ()
         for start, end in zip(self.pts, self.pts[1:]):
-            ortholine(surface, self.color, start, end, 10, rounded=True)
-
-    def reverse(self):
-        self.stations = self.stations[::-1]
-        self.origin, self.dst = self.dst, self.origin
-        self.cardinals.reverse()
-        self.pts.reverse()
+            ortholine(surface, self.rail.color, start, end, 10, rounded=True)
 
     def lerp_position(self, position) -> Tuple[Vector2, Vector2]:
         """
@@ -233,6 +240,37 @@ class TrackSegment(object):
         except ValueError:
             #! AI causes this value error, not sure why
             print("Value Error")
-        
+
         pt = self.pts[i] + dv
-        return pt, dv
+        return pt, Vector2(dv)
+
+    def next_segment(self, direction) -> 'Tuple[TrackSegment, int]':
+        """
+        returns the next segment that a train must visit on this segment and the new direction of travel
+        """
+        # continue forwards
+        if direction == 1 and self.next != None:
+            return self.next, direction
+
+        # continue backwards
+        elif direction == -1 and self.previous != None:
+            return self.previous, direction
+
+        # end of line, turn around
+        return self, direction * -1
+
+    def required_by_train(self):
+        for train in self.rail.trains:
+            segment, direction = train.current_segment, train.direction
+            while segment not in self.rail.segments:
+                if segment == self:
+                    return True
+                segment, direction = segment.next_segment(direction)
+
+        return False
+
+    def reverse(self):
+        self.stations = self.stations[::-1]
+        self.origin, self.dst = self.dst, self.origin
+        self.cardinals.reverse()
+        self.pts.reverse()

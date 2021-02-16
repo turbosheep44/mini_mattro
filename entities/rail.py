@@ -3,14 +3,15 @@ from entities.segment import TrackSegment
 from entities.train import Train
 from typing import List
 import pygame as pg
-from util.constants import SCORE_POINT
+from util.constants import RAIL_LAYER, REMOVED_RAIL_LAYER, TRAIN_LAYER
+
 
 class Rail(object):
     def __init__(self, color):
         self.color = color
-        self.segments: list[TrackSegment] = []
-        self.trains: list[Train] = []
-        # OLD LOGIC: self.todelete: bool = False
+        self.segments: 'list[TrackSegment]' = []
+        self.destroyed_segments: 'list[TrackSegment]' = []
+        self.trains: 'list[Train]' = []
 
     def __str__(self):
         if len(self.segments) != 0:
@@ -21,44 +22,48 @@ class Rail(object):
         for train in self.trains:
             train.update(dt, data)
 
-            # TODO: Disembarking passengers when rail does not exist logic
-            ''' OLD LOGIC:
-            if self.todelete and train.is_stopped:
-                print("Disembarking passengers")
-                station = data.stations[train.stopped_station]
-
-                for passenger in train.passengers: 
-                    if passenger.shape != station.shape:
-                        station.passengers.append(passenger)
-                    else:
-                        pg.event.post(pg.event.Event(SCORE_POINT))
-                
-                self.trains = []
-                self.todelete = False
-            '''
+        for segment in self.destroyed_segments:
+            # finally remove the segment permanently when
+            # there are no trains which require this segment to rejoin the non-destroyed track
+            if not segment.required_by_train():
+                self.destroyed_segments.remove(segment)
+                segment.free_offsets(data.stations)
 
     def draw(self, layers):
         for segment in self.segments:
-            segment.draw(layers[0])
+            segment.draw(layers[RAIL_LAYER])
+
+        for segment in self.destroyed_segments:
+            segment.draw(layers[REMOVED_RAIL_LAYER])
 
         for train in self.trains:
-            train.draw(layers[1])
+            train.draw(layers[TRAIN_LAYER])
 
-    def remove_segment(self, segment: TrackSegment):
+    def remove_station(self, s):
+        """
+        removes the station from the rail by deleting the associated segment
+
+        can_delete_station(s) should return true or else behaviour of this method is undefined
+        """
+
+        # find the segment and remove it from the main list
+        to_remove = self.segments[0] if s == self.start_station() else self.segments[-1]
+        self.segments.remove(to_remove)
+
+        # mark for full deletion later (in update)
+        to_remove.should_delete = True
+        self.destroyed_segments.append(to_remove)
+
+        # remove connections of other segments
+        if to_remove.previous:
+            to_remove.previous.next = None
+        if to_remove.next:
+            to_remove.next.previous = None
+
+        # if there are no more segments, mark the trains for end of life
         if len(self.segments) == 0:
-            return
-
-        self.segments.remove(segment)
-
-        # OLD LOGIC: if len(self.segments) == 0:
-            # self.todelete = True
-        if len(self.segments) == 1:
-            self.segments[0].previous, self.segments[0].next = None, None
-        else:
-            first, last = self.segments[0], self.segments[-1]
-            first.previous, first.next = None, self.segments[1]
-            for i in range(1, len(self.segments)-1):
-                self.segments[i].previous, self.segments[i].next = self.segments[i-1], self.segments[i+1]
+            for train in self.trains:
+                train.end_of_life = True
 
     def add_segment(self, segment: TrackSegment, stations: List[Station]):
         # first segment, add to list and automatically create a train
@@ -92,6 +97,10 @@ class Rail(object):
         checks if a station is valid to start a new track segment
         a valid station is either at the start or the end of the line
         """
+        # line is shutting down, cant build a new segment
+        if len(self.segments) == 0 and len(self.destroyed_segments) != 0:
+            return False
+
         # line is empty, all stations valid
         if len(self.segments) == 0:
             return True
@@ -111,7 +120,17 @@ class Rail(object):
                 return True
 
         return self.segments[-1].stations[1] == i
-    
+
+    def can_remove_station(self, s) -> bool:
+        """
+            checks whether the station can be removed from this rail
+
+            will return true if the station is at the start or at the end of this rail
+        """
+        if len(self.segments) == 0:
+            return False
+        return s == self.start_station() or s == self.end_station()
+
     def start_station(self):
         return self.segments[0].stations[0]
 

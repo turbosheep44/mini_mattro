@@ -1,10 +1,13 @@
+from pygame import color
+from entities import passenger
+from util.constants import LOSE_DELAY, PASSENGER_LOSE
 from util.draw import Shape
 from entities.passenger import Passenger
 import pygame as pg
 from pygame.math import Vector2
-from math import ceil
+from math import ceil, pi
 from typing import Tuple
-import time
+from time import time
 
 
 class Station(object):
@@ -13,8 +16,8 @@ class Station(object):
         self.shape = shape
         self.location = location
         self.tracks = {}
-        self.passengers: Passenger = []
-        self.loseTime = time.time()
+        self.passengers: 'list[Passenger]' = []
+        self.loseTime: float = 0
         self.losing = False
 
     def create_passenger(self, shape):
@@ -25,19 +28,24 @@ class Station(object):
             p.update()
 
         if(self.losing):
-            if((int(time.time()-int(self.loseTime))) > 10):
+            if time() - self.loseTime > LOSE_DELAY:
                 return True
 
-        if(len(self.passengers) >= 6 and not(self.losing)):
+        if len(self.passengers) >= PASSENGER_LOSE and not(self.losing):
             self.losing = True
-            self.loseTime = time.time()
+            self.loseTime = time()
 
-        if (len(self.passengers) < 6):
+        if len(self.passengers) < PASSENGER_LOSE:
             self.losing = False
 
     def draw(self, surface):
+        if self.losing:
+            lost = (time() - self.loseTime) / LOSE_DELAY
+            pg.draw.arc(surface, (120, 0, 0), (self.location.x-35, self.location.y-35, 70, 70),  (1-lost)*pi*2 + pi/2, pi/2, width=4)
+
+        passenger_location = Vector2(self.location.x + 25, self.location.y - 18)
         for i, p in enumerate(self.passengers):
-            p.draw(surface, self.location, i)
+            p.draw(surface, passenger_location, i)
 
         self.shape.draw(surface, self.location, 40, True, 4)
 
@@ -72,6 +80,11 @@ class Station(object):
 
         # mark the offset as used
         self.tracks[dv][index] = True
+
+    def free_offset(self, dv: Vector2, offset: int):
+        dv = (dv.x, dv.y)
+        index = self.offset_to_index(offset)
+        self.tracks[dv][index] = False
 
     def can_use_offset(self, dv: Vector2, offset):
         dv = (dv.x, dv.y)
