@@ -112,7 +112,7 @@ def left_click_down(event):
     pt = event.pos
     s = clip_to_station(pt)
     if s != None and data.active_rail.is_station_valid(s):
-        data.tmp_segment = TrackSegment(data.active_rail.color, data.stations[s].location, (s, None))
+        data.tmp_segment = TrackSegment(data.active_rail, data.stations[s].location, (s, None))
 
 
 def left_click_up(event):
