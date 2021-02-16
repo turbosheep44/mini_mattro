@@ -28,15 +28,17 @@ class TrackSegment(object):
 
         self.pts: 'list[Vector2]' = []
 
-    def update_dst(self, stations: List[Station], dst, station: int):
+    def update_dst(self, stations: List[Station], station: int, pt: 'Tuple[int, int]' = None):
         """
         update_dst sets a new station to be the new destination of this track segment,
         recalculating offsets and drawing points
+
+        if `station` is `None`, then `pt` should be provided as the location of the end of the segment
         """
         if self.is_realised:
             raise ValueError("cannot call update_dst on a track segment which has been realised")
 
-        self.dst = Vector2(dst)
+        self.dst = Vector2(stations[station].location if not station == None else pt)
         self.stations = (self.stations[0], station)
 
         # no points required when points are the same

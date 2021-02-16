@@ -39,26 +39,45 @@ class Rail(object):
         for train in self.trains:
             train.draw(layers[TRAIN_LAYER])
 
-    def remove_station(self, s):
+    def remove_station(self, s, stations: 'list[Station]'):
         """
-        removes the station from the rail by deleting the associated segment
+        removes the station `s` from the rail by deleting the associated segment
+        requires a list of all `stations`
 
         can_delete_station(s) should return true or else behaviour of this method is undefined
         """
 
-        # find the segment and remove it from the main list
-        to_remove = self.segments[0] if s == self.start_station() else self.segments[-1]
-        self.segments.remove(to_remove)
+        # find the segment(s) and remove them from the segment list
+        to_remove = [segment for segment in self.segments if s in segment.stations]
+        for remove in to_remove:
+            self.segments.remove(remove)
 
-        # mark for full deletion later (in update)
-        to_remove.should_delete = True
-        self.destroyed_segments.append(to_remove)
+            # mark for full deletion later (in update)
+            remove.should_delete = True
+            self.destroyed_segments.append(remove)
 
-        # remove connections of other segments
-        if to_remove.previous:
-            to_remove.previous.next = None
-        if to_remove.next:
-            to_remove.next.previous = None
+        # if required, make a new segment to bridge the gap
+        new_segment = None
+        if to_remove[0].previous and to_remove[-1].next:
+            start = to_remove[0].stations[0]
+            end = to_remove[-1].stations[-1]
+            new_segment = TrackSegment(self, stations[start].location, (start, None))
+            new_segment.update_dst(stations, end)
+
+            # insert the new segment and realise it
+            insert_at = 0
+            for i in range(len(self.segments)-1):
+                if self.segments[i].stations[-1] != self.segments[i+1].stations[0]:
+                    insert_at = 0
+                    break
+            self.segments.insert(insert_at, new_segment)
+            new_segment.realise(stations)
+
+        # replace connections of other segments with a connection to new segment (or None)
+        if to_remove[0].previous:
+            to_remove[0].previous.next = new_segment
+        if to_remove[-1].next:
+            to_remove[-1].next.previous = new_segment
 
         # if there are no more segments, mark the trains for end of life
         if len(self.segments) == 0:
@@ -66,6 +85,12 @@ class Rail(object):
                 train.end_of_life = True
 
     def add_segment(self, segment: TrackSegment, stations: List[Station]):
+        """
+        adds a segment to the start or the end of the rail
+
+            - if this is the first segment in the rail then a train is also created
+            - if the segment is not in the correct order it is flipped
+        """
         # first segment, add to list and automatically create a train
         if len(self.segments) == 0:
             self.segments.append(segment)
@@ -127,9 +152,7 @@ class Rail(object):
 
             will return true if the station is at the start or at the end of this rail
         """
-        if len(self.segments) == 0:
-            return False
-        return s == self.start_station() or s == self.end_station()
+        return self.is_on_rail(s)
 
     def start_station(self):
         return self.segments[0].stations[0]

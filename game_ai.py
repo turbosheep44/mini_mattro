@@ -162,7 +162,7 @@ class MiniMetroGameAI:
         if len(rail.segments) == 0:
 
             tmp_segment = TrackSegment(rail.color, stations[0].location, (s1, None))
-            tmp_segment.update_dst(data.stations, stations[1].location, s2)
+            tmp_segment.update_dst(data.stations,  s2)
             rail.add_segment(tmp_segment, data.stations)
 
         else:
@@ -181,14 +181,14 @@ class MiniMetroGameAI:
             if stations[0] == start or stations[0] == end:
 
                 temp_segment = TrackSegment(rail.color, stations[0].location, (s1, None))
-                temp_segment.update_dst(data.stations, stations[1].location, s2)
+                temp_segment.update_dst(data.stations,  s2)
 
                 rail.add_segment(temp_segment, data.stations)
 
             if stations[1] == start or stations[1] == end:
 
                 temp_segment = TrackSegment(rail.color, stations[1].location, (s2, None))
-                temp_segment.update_dst(data.stations, stations[0].location, s1)
+                temp_segment.update_dst(data.stations,  s1)
 
                 rail.add_segment(temp_segment, data.stations)
 

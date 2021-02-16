@@ -136,14 +136,14 @@ class MiniMetroGame:
         if data.tmp_segment:
             s = self.clip_to_station(event.pos)
             if s != None and not data.active_rail.is_on_rail(s):
-                data.tmp_segment.update_dst(data.stations, data.stations[s].location, s)
+                data.tmp_segment.update_dst(data.stations, s)
                 data.active_rail.add_segment(data.tmp_segment, data.stations)
             data.tmp_segment = None
 
     def right_click_up(self, event):
         s = self.clip_to_station(event.pos)
         if s != None and data.active_rail.can_remove_station(s):
-            data.active_rail.remove_station(s)
+            data.active_rail.remove_station(s, data.stations)
 
     def clip_to_station(self, pt):
         for i, s in enumerate(data.stations):
@@ -157,8 +157,7 @@ class MiniMetroGame:
             s = self.clip_to_station(pt)
             if data.active_rail.is_on_rail(s):
                 s = None
-            location = pt if s == None else data.stations[s].location
-            data.tmp_segment.update_dst(data.stations, location, s)
+            data.tmp_segment.update_dst(data.stations,  s, pt)
 
         for train in data.trains():
             train.hover = train.is_hovering(pt)
