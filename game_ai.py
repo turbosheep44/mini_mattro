@@ -4,6 +4,7 @@ from pygame.constants import K_SPACE
 from util.gui import *
 from entities import TrackSegment, Station, Train
 from util import *
+from util.gui import setup_gui
 import numpy as np
 import enum
 
@@ -12,10 +13,12 @@ pg.font.init()
 font = pg.font.SysFont('OpenSans-Regular', 24)
 SPEED = 60
 
+
 class Mode(enum.Enum):
-   DoNothing = 0
-   Connect = 1
-   Disconnect = 2
+    DoNothing = 0
+    Connect = 1
+    Disconnect = 2
+
 
 class MiniMetroGameAI:
     def __init__(self, w=1000, h=900):
@@ -23,28 +26,28 @@ class MiniMetroGameAI:
         self.h = h
 
         self.display = pg.display.set_mode((self.w, self.h), pg.DOUBLEBUF)
-        pg.display.set_caption("MiniMetro_Human")
+        pg.display.set_caption("MiniMattro")
         self.clock = pg.time.Clock()
-        self.layers = [pg.Surface((self.w, self.h), pg.SRCALPHA) for _ in range(3)]
+        self.layers = [pg.Surface((self.w, self.h), pg.SRCALPHA) for _ in range(5)]
 
         self.data = data
 
         self.reset()
-        
+
     def reset(self):
         self.dt = 0
         self.passenger_spawn = 0
-        self.gui = gui.setup_gui([self.w, self.h])
+        self.gui = setup_gui([self.w, self.h])
 
-        data.score: int = 0
+        data.score = 0
         data.stations = [Station(Shape.CIRCLE, Vector2(125, 100)),
-                     Station(Shape.CIRCLE, Vector2(350, 150)),
-                     Station(Shape.CIRCLE, Vector2(300, 350)),
-                     Station(Shape.CIRCLE, Vector2(600, 650)),
-                     Station(Shape.SQUARE, Vector2(400, 250)),
-                     Station(Shape.SQUARE, Vector2(500, 500)),
-                     Station(Shape.TRIANGLE, Vector2(100, 450)),
-                     Station(Shape.TRIANGLE, Vector2(100, 250))]
+                         Station(Shape.CIRCLE, Vector2(350, 150)),
+                         Station(Shape.CIRCLE, Vector2(300, 350)),
+                         Station(Shape.CIRCLE, Vector2(600, 650)),
+                         Station(Shape.SQUARE, Vector2(400, 250)),
+                         Station(Shape.SQUARE, Vector2(500, 500)),
+                         Station(Shape.TRIANGLE, Vector2(100, 450)),
+                         Station(Shape.TRIANGLE, Vector2(100, 250))]
         data.rails = []
         data.reset_color()
         data.create_rail(self.gui)
@@ -52,15 +55,23 @@ class MiniMetroGameAI:
         data.create_rail(self.gui)
 
     def play_step(self, action):
-        
+
         dt = self.dt/1000
+        reward, game_over, score = self.update(dt, action)
+        self.draw()
+        self.dt = self.clock.tick(SPEED)
+
+        return reward, game_over, score
+
+    def update(self, dt, action):
+
         reward = 0
 
-        # 1) UPDATE GUI
+        # UPDATE GUI
         self.gui.update(dt)
         self.passenger()
 
-        # 2) EXECUTE USER INPUT
+        # HANDLE EVENTS
         for event in pg.event.get():
             if self.gui.process_event(event):
                 continue
@@ -73,31 +84,27 @@ class MiniMetroGameAI:
             elif event.type == LOSE_POINT:
                 data.score -= 1
                 self.gui.set_score(data.score)
-                #? Should we penalise by the same rate that we reward? Probably not
-                #? but I'm not too sure. For now, I set it -10 since we are deducing the score 
-                #? by the same rate but the negative reward will probably need to be tweaked
-                reward = -10 
+                # ? Should we penalise by the same rate that we reward? Probably not
+                # ? but I'm not too sure. For now, I set it -10 since we are deducing the score
+                # ? by the same rate but the negative reward will probably need to be tweaked
+                reward = -10
             elif event.type == TRAIN_STOP:
                 self.train_stop(event)
-            
-        # 3) GIVEN action, CONDUCT IT :P
+
+        # GIVEN action, CONDUCT IT :P
         self.do_action(action)
 
         for r in data.rails:
             r.update(dt, data)
-            
+
         self.passenger_spawn += dt
-    
-        # 3) CHECK IF GAME OVER
+
+        # CHECK IF GAME OVER
         for x in data.stations:
-            if x.update(): 
-                #? Should we penalise at game over?
+            if x.update():
+                # ? Should we penalise at game over?
                 reward = -10
                 return reward, True, data.score
-                
-        # 4) UPDATE UI AND CLOCK
-        self.draw()
-        self.dt = self.clock.tick(SPEED)
 
         return reward, False, data.score
 
@@ -114,7 +121,7 @@ class MiniMetroGameAI:
         elif mode == Mode.Disconnect:
             #print("AI has chosen to disconnect a segment!")
             self.disconnect_segment(stations, rail)
-             
+
     def interpret_action(self, action):
 
         # Initialise to interpret action
@@ -162,7 +169,7 @@ class MiniMetroGameAI:
 
             if rail.is_on_rail(s1) and rail.is_on_rail(s2):
                 #print("AI has chosen an invalid action!")
-                return 
+                return
 
             if not rail.is_on_rail(s1) and not rail.is_on_rail(s2):
                 #print("AI has chosen an invalid action!")
@@ -207,7 +214,7 @@ class MiniMetroGameAI:
             #print("AI has chosen an invalid action!")
             return
         '''
-        
+
     def draw(self):
 
         self.display.fill((100, 100, 100))
@@ -218,31 +225,32 @@ class MiniMetroGameAI:
             r.draw(self.layers)
 
         if data.tmp_segment:
-            data.tmp_segment.draw(self.layers[0])
+            data.tmp_segment.draw(self.layers[RAIL_LAYER])
 
         for s in data.stations:
-            s.draw(self.layers[-1])
+            s.draw(self.layers[STATION_LAYER])
 
-        self.gui.draw(self.layers[-1])
+        self.gui.draw(self.layers[GUI_LAYER])
 
         # show fps
         fps = font.render(str(int(self.clock.get_fps())), False, (255, 255, 255))
         self.display.blit(fps, (self.display.get_size()[0]-fps.get_size()[0], 0))
 
         # draw each layer
+        self.layers[REMOVED_RAIL_LAYER].set_alpha(128)
         for layer in self.layers:
             self.display.blit(layer, (0, 0))
-            
+
         pg.display.flip()
 
     def train_stop(self, event):
         station: Station = data.stations[event.station]
         train: Train = event.train
 
-        if(len(train.passengers) < 7):
-            for passenger in station.passengers:
-                if passenger.should_embark():
-                    train.embark.append(passenger)
+        for passenger in station.passengers:
+            if passenger.should_embark():
+                train.embark.append(passenger)
+                passenger.is_boarding = True
 
         for passenger in train.passengers:
             if passenger.should_disembark(station.shape):
@@ -263,6 +271,7 @@ class MiniMetroGameAI:
 
             randomStation.create_passenger(randomPassenger)
             self.passenger_spawn = 0
+
 
 '''
 if __name__ == '__main__':

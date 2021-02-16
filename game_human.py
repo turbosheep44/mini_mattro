@@ -22,7 +22,7 @@ class MiniMetroGame:
 
         # surface = display
         self.display = pg.display.set_mode((self.w, self.h), pg.DOUBLEBUF)
-        pg.display.set_caption("MiniMetro_Human")
+        pg.display.set_caption("MiniMattro")
         self.clock = pg.time.Clock()
         self.layers = [pg.Surface((self.w, self.h), pg.SRCALPHA) for _ in range(5)]
 
