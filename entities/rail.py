@@ -154,8 +154,6 @@ class Rail(object):
     def can_remove_station(self, s) -> bool:
         """
             checks whether the station can be removed from this rail
-
-            will return true if the station is at the start or at the end of this rail
         """
         return self.is_on_rail(s)
 
