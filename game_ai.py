@@ -68,7 +68,6 @@ class MiniMetroGameAI:
         reward = 0
 
         # UPDATE GUI
-        self.gui.update(dt)
         self.passenger()
 
         # HANDLE EVENTS
@@ -79,17 +78,21 @@ class MiniMetroGameAI:
                 exit(0)
             elif event.type == SCORE_POINT:
                 data.score += 1
-                self.gui.set_score(data.score)
+                self.gui.update_values()
                 reward = 10
             elif event.type == LOSE_POINT:
                 data.score -= 1
-                self.gui.set_score(data.score)
+                self.gui.update_values()
                 # ? Should we penalise by the same rate that we reward? Probably not
                 # ? but I'm not too sure. For now, I set it -10 since we are deducing the score
                 # ? by the same rate but the negative reward will probably need to be tweaked
                 reward = -10
             elif event.type == TRAIN_STOP:
                 self.train_stop(event)
+            elif event.type == REQUEST_TRAIN:
+                self.add_train()
+            elif event.type == EOL_TRAIN:
+                self.delete_train(event.train)
 
         # GIVEN action, CONDUCT IT :P
         self.do_action(action)
@@ -214,8 +217,8 @@ class MiniMetroGameAI:
         self.gui.draw(self.layers[GUI_LAYER])
 
         # show fps
-        fps = font.render(str(int(self.clock.get_fps())), False, (255, 255, 255))
-        self.display.blit(fps, (self.display.get_size()[0]-fps.get_size()[0], 0))
+        fps = font.render(f"FPS: {int(self.clock.get_fps())}", False, (255, 255, 255))
+        self.display.blit(fps, (10, self.display.get_size()[1]-fps.get_size()[1]-10))
 
         # draw each layer
         self.layers[REMOVED_RAIL_LAYER].set_alpha(128)
@@ -252,6 +255,33 @@ class MiniMetroGameAI:
 
             randomStation.create_passenger(randomPassenger)
             self.passenger_spawn = 0
+
+    def create_rail(self):
+        data.rails.append(Rail(COLORS[data.next_color()]))
+        self.gui.append_rail(data.rails[-1])
+
+    def add_train(self):
+        if data.available_trains < 1 or len(data.active_rail.segments) < 1:
+            return
+
+        data.available_trains -= 1
+        data.active_rail.trains.append(Train(random.choice(data.active_rail.segments)))
+        pg.event.post(pg.event.Event(TRAINS_CHANGED))
+
+    def upgrade_train(self, train: Train):
+        if data.available_train_upgrades < 1 and not train.is_upgraded:
+            return
+
+        data.available_train_upgrades -= 1
+        train.is_upgraded = True
+        pg.event.post(pg.event.Event(TRAINS_CHANGED))
+
+    def delete_train(self, train: Train):
+        train.current_segment.rail.trains.remove(train)
+        data.available_trains += 1
+        if train.is_upgraded:
+            data.available_train_upgrades += 1
+        pg.event.post(pg.event.Event(TRAINS_CHANGED))
 
 
 '''

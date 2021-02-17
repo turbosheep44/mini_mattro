@@ -3,7 +3,7 @@ from entities.segment import TrackSegment
 from entities.train import Train
 from typing import List
 import pygame as pg
-from util.constants import RAIL_LAYER, REMOVED_RAIL_LAYER, TRAIN_LAYER
+from util.constants import REQUEST_TRAIN, RAIL_LAYER, REMOVED_RAIL_LAYER, TRAIN_LAYER
 
 
 class Rail(object):
@@ -41,7 +41,7 @@ class Rail(object):
 
     def remove_station(self, s, stations: 'list[Station]'):
         """
-        removes the station `s` from the rail by deleting the associated segment
+        removes the station `s` from the rail by deleting the associated segment,
         requires a list of all `stations`
 
         can_delete_station(s) should return true or else behaviour of this method is undefined
@@ -49,6 +49,7 @@ class Rail(object):
 
         # find the segment(s) and remove them from the segment list
         to_remove = [segment for segment in self.segments if s in segment.stations]
+        first_removed_index = self.segments.index(to_remove[0])
         for remove in to_remove:
             self.segments.remove(remove)
 
@@ -64,13 +65,12 @@ class Rail(object):
             new_segment.update_dst(stations, end)
 
             # insert the new segment and realise it
-            insert_at = 0
-            for i in range(len(self.segments)-1):
-                if self.segments[i].stations[-1] != self.segments[i+1].stations[0]:
-                    insert_at = 0
-                    break
-            self.segments.insert(insert_at, new_segment)
+            self.segments.insert(first_removed_index, new_segment)
             new_segment.realise(stations)
+
+            # connect the new segment to adjacent rails
+            new_segment.previous = to_remove[0].previous
+            new_segment.next = to_remove[-1].next
 
             # solve the edge case when there the station removed is the penultimate in the line
             if not to_remove[0].previous:
@@ -96,17 +96,20 @@ class Rail(object):
             - if this is the first segment in the rail then a train is also created
             - if the segment is not in the correct order it is flipped
         """
-        # first segment, add to list and automatically create a train
+        # first segment, add to list and automatically fire an add train event
         if len(self.segments) == 0:
             self.segments.append(segment)
-            self.trains = [Train(segment)]
+            self.trains = []
             self.segments[0].realise(stations)
+            pg.event.post(pg.event.Event(REQUEST_TRAIN))
+
         # if the segment originates at the start of the line, then prepend it to the segment list (and flip it)
         # otherwise append it to the segment list
         elif self.segments[0].stations[0] == segment.stations[0]:
             segment.reverse()
             self.segments.insert(0, segment)
             self.segments[0].realise(stations)
+
         else:
             self.segments.append(segment)
             self.segments[-1].realise(stations)

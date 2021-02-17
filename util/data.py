@@ -13,16 +13,13 @@ class Data(object):
         self.active_rail: Rail = None
 
         self.score: int = 0
+        self.available_trains = 5
+        self.available_train_upgrades = 3
 
-    def set_active_rail(self, track):
-        if track < len(self.rails):
-            self.active_rail = self.rails[track]
-
-    def create_rail(self, gui):
-        self.rails.append(Rail(COLORS[Data.NEXT_COLOR]))
+    def next_color(self):
+        color = Data.NEXT_COLOR
         Data.NEXT_COLOR += 1
-
-        gui.append_rail(self.rails[-1])
+        return color
 
     def reset_color(self):
         Data.NEXT_COLOR = 0
@@ -33,4 +30,4 @@ class Data(object):
                 yield t
 
 
-data = Data()
+data: Data = Data()

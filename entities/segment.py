@@ -217,30 +217,17 @@ class TrackSegment(object):
         if position < 0 or position > 1:
             raise ValueError("cannot lerp to a position outside of the range [0, 1]")
 
+        position = max(0.001, min(0.999, position))
         position = self.length * position
-        if position == 0:
-            position = 0.001
-        elif position == 1:
-            position = 0.999
 
         i = 0
-        try:
-            while position > self.lengths[i]:
-                position -= self.lengths[i]
-                i += 1
-        except IndexError:
-            #! AI causes this index error, not sure why
-            print("Index Error")
-            i -= 1
+        while position > self.lengths[i]:
+            position -= self.lengths[i]
+            i += 1
 
         # train is between points i and i+1, (position*100 / self.lengths[i])% of the way
         dv = self.vectors[i]
-
-        try:
-            dv.scale_to_length(position)
-        except ValueError:
-            #! AI causes this value error, not sure why
-            print("Value Error")
+        dv.scale_to_length(position)
 
         pt = self.pts[i] + dv
         return pt, Vector2(dv)

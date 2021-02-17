@@ -1,13 +1,16 @@
-import pygame as pg
+
 import random
 from pygame.constants import K_SPACE
 from pygame.event import Event
 from util.gui import *
 from entities import TrackSegment, Station, Train
 from util import *
+import pygame as pg
 
 pg.init()
 pg.font.init()
+
+
 font = pg.font.SysFont('OpenSans-Regular', 24)
 SPEED = 60
 
@@ -41,9 +44,9 @@ class MiniMetroGame:
                          Station(Shape.TRIANGLE, Vector2(100, 450)),
                          Station(Shape.TRIANGLE, Vector2(100, 250))]
 
-        data.create_rail(self.gui)
-        data.create_rail(self.gui)
-        data.create_rail(self.gui)
+        self.create_rail()
+        self.create_rail()
+        self.create_rail()
 
     def play_step(self):
 
@@ -56,7 +59,6 @@ class MiniMetroGame:
 
     def update(self, dt):
         # UPDATE GUI
-        self.gui.update(dt)
         self.passenger()
 
         # HANDLE EVENTS
@@ -74,12 +76,18 @@ class MiniMetroGame:
             elif event.type == pg.MOUSEMOTION:
                 self.mouse_move(event)
             elif event.type == SELECT_TRACK:
-                data.set_active_rail(event.track)
+                data.active_rail = data.rails[event.track]
             elif event.type == SCORE_POINT:
                 data.score += 1
-                self.gui.set_score(data.score)
+                self.gui.update_values()
             elif event.type == TRAIN_STOP:
                 self.train_stop(event)
+            elif event.type == REQUEST_TRAIN:
+                self.add_train()
+            elif event.type == UPGRADE_TRAIN:
+                self.upgrade_train(event.train)
+            elif event.type == EOL_TRAIN:
+                self.delete_train(event.train)
 
         # UPDATE TRAINS
         for r in data.rails:
@@ -113,8 +121,8 @@ class MiniMetroGame:
         self.gui.draw(self.layers[GUI_LAYER])
 
         # show fps
-        fps = font.render(str(int(self.clock.get_fps())), False, (255, 255, 255))
-        self.display.blit(fps, (self.display.get_size()[0]-fps.get_size()[0], 0))
+        fps = font.render(f"FPS: {int(self.clock.get_fps())}", False, (255, 255, 255))
+        self.display.blit(fps, (10, self.display.get_size()[1]-fps.get_size()[1]-10))
 
         # draw each layer
         self.layers[REMOVED_RAIL_LAYER].set_alpha(128)
@@ -132,7 +140,7 @@ class MiniMetroGame:
     def left_click_up(self, event):
         if data.tmp_segment:
             s = self.clip_to_station(event.pos)
-            if s != None and not data.active_rail.is_on_rail(s):
+            if s != None and not data.active_rail.is_on_rail(s) and data.tmp_segment.stations[0] != s:
                 data.tmp_segment.update_dst(data.stations, s)
                 data.active_rail.add_segment(data.tmp_segment, data.stations)
             data.tmp_segment = None
@@ -187,6 +195,33 @@ class MiniMetroGame:
 
             randomStation.create_passenger(randomPassenger)
             self.passenger_spawn = 0
+
+    def create_rail(self):
+        data.rails.append(Rail(COLORS[data.next_color()]))
+        self.gui.append_rail(data.rails[-1])
+
+    def add_train(self):
+        if data.available_trains < 1 or len(data.active_rail.segments) < 1:
+            return
+
+        data.available_trains -= 1
+        data.active_rail.trains.append(Train(random.choice(data.active_rail.segments)))
+        pg.event.post(pg.event.Event(TRAINS_CHANGED))
+
+    def upgrade_train(self, train: Train):
+        if data.available_train_upgrades < 1 and not train.is_upgraded:
+            return
+
+        data.available_train_upgrades -= 1
+        train.is_upgraded = True
+        pg.event.post(pg.event.Event(TRAINS_CHANGED))
+
+    def delete_train(self, train: Train):
+        train.current_segment.rail.trains.remove(train)
+        data.available_trains += 1
+        if train.is_upgraded:
+            data.available_train_upgrades += 1
+        pg.event.post(pg.event.Event(TRAINS_CHANGED))
 
 
 if __name__ == '__main__':

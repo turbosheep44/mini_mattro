@@ -1,6 +1,7 @@
 
+from pygame import color
 from entities.passenger import Passenger
-from util.constants import SCORE_POINT, TRAIN_CAPACITY,  TRAIN_SECONDS_PER_ACTION, TRAIN_STOP
+from util.constants import EOL_TRAIN, SCORE_POINT, TRAINS_CHANGED, TRAIN_CAPACITY,  TRAIN_SECONDS_PER_ACTION, TRAIN_STOP
 from entities.segment import TrackSegment
 from util.draw import ortholine
 import pygame as pg
@@ -10,13 +11,14 @@ from pygame import Vector2
 class Train(object):
 
     def __init__(self, segment):
-        self.position: float = 0
         self.last_position: Vector2 = Vector2(0, 0)
-        self.direction: float = 1
+        self.position: float = 0.25
+        self.direction: float = -1
         self.current_segment: TrackSegment = segment
 
         self.hover = False
         self.end_of_life: bool = False
+        self.is_upgraded: bool = False
         self.is_stopped: bool = False
         self.next_action: float = TRAIN_SECONDS_PER_ACTION
 
@@ -45,7 +47,7 @@ class Train(object):
             self.next_action = TRAIN_SECONDS_PER_ACTION
 
     def move_train(self, dt):
-        self.position += self.current_segment.position_update * dt * self.direction
+        self.position += self.current_segment.position_update * dt * self.direction * (2 if self.is_upgraded else 1)
 
         if self.position > 1 or self.position < 0:
             pg.event.post(pg.event.Event(TRAIN_STOP, train=self,
@@ -69,7 +71,7 @@ class Train(object):
 
         # remove from the rail once all passengers are gone
         else:
-            self.current_segment.rail.trains.remove(self)
+            pg.event.post(pg.event.Event(EOL_TRAIN, train=self))
 
     def process_disembark(self, dt, data):
         if not self.perform_action(dt):
@@ -110,7 +112,7 @@ class Train(object):
         if self.next_action > 0:
             return False
 
-        self.next_action = TRAIN_SECONDS_PER_ACTION
+        self.next_action = TRAIN_SECONDS_PER_ACTION * (0.5 if self.is_upgraded else 1)
         return True
 
     def choose_next_segment(self):
@@ -125,13 +127,10 @@ class Train(object):
     def draw(self, surface):
         pt, dv = self.current_segment.lerp_position(min(1, max(0, self.position)))
         self.last_position = pt
-        try:
-            dv.scale_to_length(30)
-            if self.direction != 1:
-                dv.rotate_ip(180)
-        except ValueError:
-            #! AI causes this value error, not sure why
-            print("Value Error: Cannot scale a vector with zero length")
+
+        dv.scale_to_length(30)
+        if self.direction != 1:
+            dv.rotate_ip(180)
 
         start = pt - (dv/2)
         end = pt + (dv/2)
@@ -140,7 +139,7 @@ class Train(object):
         amount_full = len(self.passengers)/TRAIN_CAPACITY
 
         # draw the train itself
-        ortholine(surface, (255, 255, 255), start, end, 15)
+        ortholine(surface, (255, 200, 0) if self.is_upgraded else (255, 255, 255), start, end, 15)
         ortholine(surface, (0, 0, 0), start+inset, start+inset+(inset_dv*amount_full), 11)
 
         # draw the passenger bubble
@@ -152,9 +151,11 @@ class Train(object):
             bubble_direction = dv.rotate(90 if split_angle > 180 else -90)
             bubble_direction.scale_to_length(30)
             bubble_start = pt + bubble_direction
-            bubble_end = bubble_start + Vector2((15*len(self.passengers))+5, 0)
+            bubble_end = bubble_start + Vector2((15*len(self.passengers))+20, 0)
 
             ortholine(surface, (255, 255, 255),  bubble_start, bubble_end, 16)
             bubble_start.x += 10
+            pg.draw.circle(surface, self.current_segment.rail.color, bubble_start, 5)
+            bubble_start.x += 15
             for i, p in enumerate(self.passengers):
                 p.draw(surface, bubble_start, i)

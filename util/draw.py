@@ -54,7 +54,7 @@ class Shape(Enum):
         # TRIANGLE
         elif self == Shape.TRIANGLE:
             radius *= 0.75
-            y_offset = diameter/10
+            y_offset = diameter*0.05
             pg.draw.polygon(surface, (180, 180, 180),
                             [[center.x, center.y - y_offset - radius],
                              [center.x + radius, center.y - y_offset + radius],
