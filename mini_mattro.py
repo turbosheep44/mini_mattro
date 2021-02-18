@@ -166,7 +166,7 @@ class MiniMattro(ABC):
         pg.event.post(pg.event.Event(TRAINS_CHANGED))
 
     def upgrade_train(self, train: Train):
-        if train and data.available_train_upgrades < 1 and not train.is_upgraded:
+        if not train or data.available_train_upgrades < 1 or train.is_upgraded:
             return
 
         data.available_train_upgrades -= 1

@@ -22,7 +22,7 @@ class Mode(enum.Enum):
 
 class MiniMattroAI(MiniMattro):
 
-    def __init__(self, simulated_speed: int = 60, normal_speed: bool = True, show_frames: int = 10):
+    def __init__(self, simulated_speed: int = 60, normal_speed: bool = False, show_frames: int = 10):
         super().__init__()
         self.simulated_speed: int = simulated_speed
         self.normal_speed: bool = normal_speed
@@ -57,15 +57,11 @@ class MiniMattroAI(MiniMattro):
 
         mode, stations, rail = self.interpret_action(action)
 
-        if mode == Mode.DoNothing:
-            #print("AI has chosen to do nothing!")
-            return
-        elif mode == Mode.Connect:
-            #print("AI has chosen to connect a segment!")
+        if mode == Mode.Connect:
             self.connect(stations[0], stations[1], rail)
+
         elif mode == Mode.Disconnect:
-            #print("AI has chosen to disconnect a segment!")
-            self.remove_station(stations, rail)
+            self.remove_station(stations[0], rail)
 
         elif mode == Mode.AddTrain:
             self.add_train(rail)
@@ -75,8 +71,9 @@ class MiniMattroAI(MiniMattro):
             self.upgrade_train(u_train)
 
         elif mode == Mode.DeleteTrain:
-            if len(data.rails[rail].trains) > 0:
-                self.delete_train(random.choice(data.rails[rail].trains))
+            alive_trains = [t for t in data.rails[rail].trains if not t.end_of_life]
+            if len(alive_trains) > 0:
+                random.choice(alive_trains).end_of_life = True
 
     def interpret_action(self, action):
         # Split action accordingly
@@ -88,33 +85,51 @@ class MiniMattroAI(MiniMattro):
         stations = np.argwhere(station_action == np.amax(station_action)).flatten()
         rail = np.argmax(rail_action)
 
-        return mode, stations, rail
+        return Mode(mode), stations, rail
+
+
+def do_action_and_delay(action):
+    game.play_step(action)
+    for i in range(120):
+        game.play_step(None)
 
 
 if __name__ == '__main__':
-    game = MiniMattroAI(60, True)
-
-    a_0 = np.array([1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
-    game_over, reward = game.play_step(a_0)
+    game = MiniMattroAI(60)
 
     while True:
-
-        # Connect s1 with s2
-        # a_0 = np.array([1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
         game_over, reward = game.play_step(None)
-
-        # a_1 = np.array([1,0,0,1,0,1,0,0,0,0,1,0,0])
-        # game_over = game.play_step(a_1)
-
-        # a_2 = np.array([1,0,0,0,0,1,1,0,0,0,1,0,0])
-        # game_over = game.play_step(a_2)
-
-        # a_3 = np.array([0,1,0,0,0,1,1,0,0,0,1,0,0])
-        # game_over = game.play_step(a_3)
-
         if game_over == True:
             break
 
-    #print('Final Score', data.score)
-
+    print('Final Score', data.score)
     pg.quit()
+
+    # create and remove segments
+    # do_action_and_delay([0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+    # do_action_and_delay([0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1])
+    # do_action_and_delay([0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+    # do_action_and_delay([0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1])
+    # do_action_and_delay([0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+    # do_action_and_delay([0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+
+    # delete a train before rail exists
+    # do_action_and_delay([0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+    # # add train to rail
+    # do_action_and_delay([0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+
+    # # upgrade train
+    # do_action_and_delay([0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+    # do_action_and_delay(None)
+    # do_action_and_delay([0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+    # do_action_and_delay([0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+
+    # # remove train
+    # do_action_and_delay([0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+    # do_action_and_delay([0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+    # do_action_and_delay(None)
+    # do_action_and_delay(None)
+    # do_action_and_delay([0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+
+    # # upgrade train
+    # do_action_and_delay([0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
