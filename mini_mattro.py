@@ -91,9 +91,9 @@ class MiniMattro(ABC):
         # CHECK GAME OVER
         for s in data.stations:
             if s.update():
-                return True, events
+                return True
 
-        return False, events
+        return False
 
     def draw(self):
 

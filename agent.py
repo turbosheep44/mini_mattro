@@ -3,6 +3,7 @@ import random
 import numpy as np
 from collections import deque
 from game_ai import MiniMattroAI
+from util import *
 from ai import model
 from ai import helper
 from util.data import data
@@ -27,14 +28,11 @@ class Agent:
         self.data = data
         self.distance_state = self.get_distance_state()
 
-    # TODO: NEED TO IMPLEMENT
     def get_state(self):
 
         state = self.get_rails_state() + self.distance_state + self.get_passenger_state()
 
         return np.array(state, dtype=int)
-
-        # RETURNS NUMBER OF PASSENGERS BY SHAPE AT EVERY STATION
 
     def get_passenger_state(self):
         p_states = []
@@ -97,8 +95,9 @@ class Agent:
         station_action = [0] * 8
         rail_action = [0] * 3
         
-        station_prediction = prediction[6:len(self.data.stations)+6]
-        rail_prediction = prediction[len(self.data.stations)+6:len(prediction)]
+        if prediction != None:
+            station_prediction = prediction[6:len(self.data.stations)+6]
+            rail_prediction = prediction[len(self.data.stations)+6:len(prediction)]
 
         if mode == 0:
             return station_action, rail_action
@@ -112,10 +111,10 @@ class Agent:
                 s1 = stations[0].item()
                 s2 = stations[1].item()
                 station_action[s1] = 1
-                station_action[s2] = 2                
+                station_action[s2] = 1               
         elif mode == 2:
             if prediction == None:
-                s1 = random.randint(0, 8)
+                s1 = random.randint(0, 7)
                 station_action[s1] = 1
             else:
                 s1 = torch.argmax(station_prediction).item()
@@ -137,7 +136,7 @@ class Agent:
         mode_action = [0] * 6
         
         if random.randint(0, 200) < self.epsilon:
-            mode = random.randint(0, 4)
+            mode = random.randint(0, 5)
             mode_action[mode] = 1
 
             station_action, rail_action = self.get_station_rail_actions(mode)
