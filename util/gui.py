@@ -13,7 +13,7 @@ class GUI(object):
     def __init__(self, screen):
 
         button_style = {'size': (25, 25), 'color': (200, 200, 200), 'outline_thickness': 1, 'outline_color': (0, 0, 0)}
-        self.__add_train_button = button(on_click=lambda _: pg.event.post(pg.event.Event(REQUEST_TRAIN)), child=text('+', color=(0, 0, 0)), **button_style)
+        self.__add_train_button = button(on_click=lambda _: pg.event.post(pg.event.Event(REQUEST_TRAIN, rail=data.active_rail)), child=text('+', color=(0, 0, 0)), **button_style)
         self.__available_trains = text('-', color=(0, 0, 0))
         self.__add_train_group = organizer(organizer.VERTICAL, children=[self.__available_trains, self.__add_train_button], padding=5, spacing=8)
 

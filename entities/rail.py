@@ -101,7 +101,7 @@ class Rail(object):
             self.segments.append(segment)
             self.trains = []
             self.segments[0].realise(stations)
-            pg.event.post(pg.event.Event(REQUEST_TRAIN))
+            pg.event.post(pg.event.Event(REQUEST_TRAIN, rail=self))
 
         # if the segment originates at the start of the line, then prepend it to the segment list (and flip it)
         # otherwise append it to the segment list

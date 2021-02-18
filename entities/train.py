@@ -1,5 +1,4 @@
 
-from pygame import color
 from entities.passenger import Passenger
 from util.constants import EOL_TRAIN, SCORE_POINT, TRAINS_CHANGED, TRAIN_CAPACITY,  TRAIN_SECONDS_PER_ACTION, TRAIN_STOP
 from entities.segment import TrackSegment
@@ -128,7 +127,10 @@ class Train(object):
         pt, dv = self.current_segment.lerp_position(min(1, max(0, self.position)))
         self.last_position = pt
 
-        dv.scale_to_length(30)
+        try:
+            dv.scale_to_length(30)
+        except:
+            _, _ = self.current_segment.lerp_position(min(1, max(0, self.position)))
         if self.direction != 1:
             dv.rotate_ip(180)
 

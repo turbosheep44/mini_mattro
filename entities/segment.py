@@ -226,11 +226,17 @@ class TrackSegment(object):
             i += 1
 
         # train is between points i and i+1, (position*100 / self.lengths[i])% of the way
-        dv = self.vectors[i]
+        dv = Vector2(self.vectors[i])
         dv.scale_to_length(position)
-
         pt = self.pts[i] + dv
-        return pt, Vector2(dv)
+
+        # if the position is very very close to the joint, the dv might end up so small that
+        # the length calc underruns the float64, this is a problem because it can no longer be scaled
+        # so we just copy the vector again
+        if not dv.length() > 0:
+            dv = Vector2(self.vectors[i])
+
+        return pt, dv
 
     def next_segment(self, direction) -> 'Tuple[TrackSegment, int]':
         """

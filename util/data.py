@@ -9,8 +9,8 @@ class Data(object):
         self.stations: 'list[Station]' = []
         self.rails: 'list[Rail]' = []
 
-        self.tmp_segment: TrackSegment = None
         self.active_rail: Rail = None
+        self.active_rail_index: int = None
 
         self.score: int = 0
         self.available_trains = 5
@@ -31,3 +31,8 @@ class Data(object):
 
 
 data: Data = Data()
+
+
+def reset_data():
+    global data
+    data = Data()
