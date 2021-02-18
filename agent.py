@@ -93,59 +93,64 @@ class Agent:
     def train_short_memory(self, state, action, reward, next_state, done):
         self.trainer.train_step(state, action, reward, next_state, done)
     
-    def get_action_two(self,mode,random = False):
+    def get_station_rail_actions(self,mode,prediction=None):
         station_action = [0] * 8
         rail_action = [0] * 3
         
+        station_prediction = prediction[6:len(self.data.stations)+6]
+        rail_prediction = prediction[len(self.data.stations)+6:len(prediction)]
+
         if mode == 0:
             return station_action, rail_action
         elif mode == 1:
-            if random:
-               s_sample = random.sample(range(8), 1)
-            return 
+            if prediction == None:
+                s1,s2 = random.sample(range(8), 2)
+                station_action[s1] = 1
+                station_action[s2] = 1
+            else:
+                stations = torch.topk(station_prediction, k=2)[1]
+                s1 = stations[0].item()
+                s2 = stations[1].item()
+                station_action[s1] = 1
+                station_action[s2] = 2                
+        elif mode == 2:
+            if prediction == None:
+                s1 = random.randint(0, 8)
+                station_action[s1] = 1
+            else:
+                s1 = torch.argmax(station_prediction).item()
+                station_action[s1] = 1
+        
+        if prediction == None:
+            r = random.randint(0, 2)
+            rail_action[r] = 1
+        else:
+            r = torch.argmax(rail_prediction).item()
+            rail_action[r] = 1
+
+        return station_action, rail_action
 
 
     # * SHOULD BE OK
     def get_action(self, state):
         self.epsilon = GAME_COUNT - self.n_games
-
+        mode_action = [0] * 6
+        
         if random.randint(0, 200) < self.epsilon:
             mode = random.randint(0, 4)
             mode_action[mode] = 1
 
-            if mode == 2:
-                s_sample = random.sample(range(8), 1)
-                s1 = s_sample[0]
-                station_action[s1] = 1
-
-            s_sample = random.sample(range(8), 2)
-            s1 = s_sample[0]
-            s2 = s_sample[1]
-            station_action[s1] = 1
-            station_action[s2] = 1
-
-            rail = random.randint(0, 2)
-            rail_action[rail] = 1
+            station_action, rail_action = self.get_station_rail_actions(mode)
 
         else:
             state0 = torch.tensor(state, dtype=torch.float)
             prediction = self.model(state0)
-            print(prediction.data)
-            mode_prediction = prediction[:6]
-            station_prediction = prediction[6:len(self.data.stations)+6]
-            rail_prediction = prediction[len(self.data.stations)+6:len(prediction)]
 
+            mode_prediction = prediction[:6]
             mode = torch.argmax(mode_prediction).item()
             mode_action[mode] = 1
 
-            stations = torch.topk(station_prediction, k=2)[1]
-            s1 = stations[0].item()
-            s2 = stations[1].item()
-            station_action[s1] = 1
-            station_action[s2] = 1
-
-            rail = torch.argmax(rail_prediction).item()
-            rail_action[rail] = 1
+            station_action, rail_action = self.get_station_rail_actions(mode, prediction)
 
         return np.array(mode_action + station_action + rail_action)
 
