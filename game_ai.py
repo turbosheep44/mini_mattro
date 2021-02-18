@@ -22,8 +22,8 @@ class MiniMattroAI(MiniMattro):
     def __init__(self, simulated_speed: int):
         super().__init__()
         self.simulated_speed: int = simulated_speed
-        self.frames = 0
-        self.tmp_segment: TrackSegment = None
+        self.frames: int = 0
+        self.reward: int = 0
 
     def play_step(self, action):
 
@@ -36,10 +36,15 @@ class MiniMattroAI(MiniMattro):
             self.draw()
             self.frames = 0
 
-        return game_over
+        return game_over, self.reward
 
     def handle_events(self, events: 'list[Event]') -> None:
-        pass
+        self.reward = 0
+        for event in events:
+            if event.type == LOSE_POINT:
+                self.reward -= 10
+            elif event.type == SCORE_POINT:
+                self.reward += 1
 
     def do_action(self, action):
 
@@ -94,7 +99,7 @@ if __name__ == '__main__':
     while True:
 
         a_0 = np.array([1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1])
-        game_over = game.play_step(None)
+        game_over, reward = game.play_step(None)
 
         # a_1 = np.array([1,0,0,1,0,1,0,0,0,0,1,0,0])
         # game_over = game.play_step(a_1)
