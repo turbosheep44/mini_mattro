@@ -22,7 +22,7 @@ class Mode(enum.Enum):
 
 class MiniMattroAI(MiniMattro):
 
-    def __init__(self, simulated_speed: int):
+    def __init__(self, simulated_speed: int = 10):
         super().__init__()
         self.simulated_speed: int = simulated_speed
         self.frames = 0
@@ -53,7 +53,7 @@ class MiniMattroAI(MiniMattro):
             return
         elif mode == Mode.Connect:
             #print("AI has chosen to connect a segment!")
-            self.connect(stations, rail)
+            self.connect(stations[0], stations[1], rail)
         elif mode == Mode.Disconnect:
             #print("AI has chosen to disconnect a segment!")
             self.remove_station(stations, rail)
