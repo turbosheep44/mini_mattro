@@ -79,32 +79,16 @@ class MiniMattroAI(MiniMattro):
                 self.delete_train(random.choice(data.rails[rail].trains))
 
     def interpret_action(self, action):
-
-        # Initialise to interpret action
-        mode = None
-        s1, s2 = (None, None)
-        r = None
-
         # Split action accordingly
         mode_action = action[:6]
         station_action = action[6:len(data.stations)+6]
-        rail_action = action[len(data.stations)+6:len(action)]
+        rail_action = action[len(data.stations)+6:]
 
-        # Interpret mode, if Mode.DoNothing then no need for further interpretation
         mode = np.argmax(mode_action)
+        stations = np.argwhere(station_action == np.amax(station_action)).flatten()
+        rail = np.argmax(rail_action)
 
-        # Interpret stations
-        result = np.where(station_action == 1)
-        s1 = result[0][0]
-        s2 = result[0][1]
-
-        # Interpret rail
-        result = np.where(rail_action == 1)
-        r = result[0][0]
-
-        # WORK NEEDED HERE
-
-        return mode, (s1, s2), r
+        return mode, stations, rail
 
 
 if __name__ == '__main__':
