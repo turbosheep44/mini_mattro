@@ -15,6 +15,9 @@ class Mode(enum.Enum):
     DoNothing = 0
     Connect = 1
     Disconnect = 2
+    AddTrain = 3
+    UpgradeTrain = 4
+    DeleteTrain = 5
 
 
 class MiniMattroAI(MiniMattro):
@@ -50,10 +53,20 @@ class MiniMattroAI(MiniMattro):
             return
         elif mode == Mode.Connect:
             #print("AI has chosen to connect a segment!")
-            self.create_segment(stations, rail)
+            self.connect(stations, rail)
         elif mode == Mode.Disconnect:
             #print("AI has chosen to disconnect a segment!")
-            self.disconnect_segment(stations, rail)
+            self.remove_station(stations, rail)
+
+        elif mode == Mode.AddTrain:
+            self.add_train(rail)
+
+        elif mode == Mode.UpgradeTrain:
+            u_train = rail.get_upgradable()
+            self.upgrade_train(u_train)
+
+        elif mode == Mode.DeleteTrain:
+            self.delete_train(random.choice(rail.trains))
 
     def interpret_action(self, action):
 
@@ -63,18 +76,24 @@ class MiniMattroAI(MiniMattro):
         r = None
 
         # Split action accordingly
-        mode_action = action[:3]
-        station_action = action[3:len(data.stations)+3]
-        rail_action = action[len(data.stations)+3:len(action)]
+        mode_action = action[:6]
+        station_action = action[6:len(data.stations)+6]
+        rail_action = action[len(data.stations)+6:len(action)]
 
         # Interpret mode, if Mode.DoNothing then no need for further interpretation
-        if np.array_equal(mode_action, [0, 0, 1]):
+        if np.array_equal(mode_action, [0, 0, 1, 0, 0, 0]):
             mode = Mode.DoNothing
             return mode, (s1, s2), r
-        elif np.array_equal(mode_action, [1, 0, 0]):
+        elif np.array_equal(mode_action, [1, 0, 0, 0, 0, 0]):
             mode = Mode.Connect
-        elif np.array_equal(mode_action, [0, 1, 0]):
+        elif np.array_equal(mode_action, [0, 1, 0, 0, 0, 0]):
             mode = Mode.Disconnect
+        elif np.array_equal(mode_action, [0, 0, 0, 1, 0, 0]):
+            mode = Mode.AddTrain
+        elif np.array_equal(mode_action, [0, 0, 0, 0, 1, 0]):
+            mode = Mode.UpgradeTrain
+        elif np.array_equal(mode_action, [0, 0, 0, 0, 0, 1]):
+            mode = Mode.DeleteTrain
 
         # Interpret stations
         result = np.where(station_action == 1)
@@ -85,6 +104,8 @@ class MiniMattroAI(MiniMattro):
         result = np.where(rail_action == 1)
         r = result[0][0]
 
+        # WORK NEEDED HERE
+
         return mode, (s1, s2), r
 
 
@@ -93,7 +114,7 @@ if __name__ == '__main__':
 
     while True:
 
-        a_0 = np.array([1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1])
+        a_0 = np.array([1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1])
         game_over = game.play_step(None)
 
         # a_1 = np.array([1,0,0,1,0,1,0,0,0,0,1,0,0])

@@ -165,3 +165,12 @@ class Rail(object):
 
     def end_station(self):
         return self.segments[-1].stations[1]
+
+    def get_upgradable(self):
+        sortedT = self.trains.sort(key=lambda t: len(t.passengers), reverse=True)
+
+        for t in sortedT:
+            if not t.is_upgraded:
+                return t
+
+        return None

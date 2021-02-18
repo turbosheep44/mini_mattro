@@ -77,12 +77,12 @@ class Agent:
     def get_action(self, state):
         self.epsilon = GAME_COUNT - self.n_games
 
-        mode_action = [0, 0, 0]
+        mode_action = [0, 0, 0, 0, 0, 0]
         station_action = [0, 0, 0, 0, 0, 0, 0, 0]
         rail_action = [0, 0, 0]
 
         if random.randint(0, 200) < self.epsilon:
-            mode = random.randint(0, 2)
+            mode = random.randint(0, 4)
             mode_action[mode] = 1
 
             s_sample = random.sample(range(8), 2)
@@ -98,9 +98,9 @@ class Agent:
             state0 = torch.tensor(state, dtype=torch.float)
             prediction = self.model(state0)
 
-            mode_prediction = prediction[:3]
-            station_prediction = prediction[3:len(self.data.stations)+2]
-            rail_prediction = prediction[len(self.data.stations)+2:len(prediction)]
+            mode_prediction = prediction[:6]
+            station_prediction = prediction[6:len(self.data.stations)+6]
+            rail_prediction = prediction[len(self.data.stations)+6:len(prediction)]
 
             mode = torch.argmax(mode_prediction).item()
             mode_action[mode] = 1
