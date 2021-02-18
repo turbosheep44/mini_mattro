@@ -85,7 +85,8 @@ class Station(object):
     def free_offset(self, dv: Vector2, offset: int):
         dv = (dv.x, dv.y)
         index = self.offset_to_index(offset)
-        self.tracks[dv][index] = False
+        if dv in self.tracks and index < len(self.tracks[dv]):
+            self.tracks[dv][index] = False
 
     def can_use_offset(self, dv: Vector2, offset):
         dv = (dv.x, dv.y)

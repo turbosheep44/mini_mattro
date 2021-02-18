@@ -127,10 +127,7 @@ class Train(object):
         pt, dv = self.current_segment.lerp_position(min(1, max(0, self.position)))
         self.last_position = pt
 
-        try:
-            dv.scale_to_length(30)
-        except:
-            _, _ = self.current_segment.lerp_position(min(1, max(0, self.position)))
+        dv.scale_to_length(30)
         if self.direction != 1:
             dv.rotate_ip(180)
 

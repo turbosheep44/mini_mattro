@@ -233,7 +233,7 @@ class TrackSegment(object):
         # if the position is very very close to the joint, the dv might end up so small that
         # the length calc underruns the float64, this is a problem because it can no longer be scaled
         # so we just copy the vector again
-        if not dv.length() > 0:
+        if not dv.length() > 10:
             dv = Vector2(self.vectors[i])
 
         return pt, dv
@@ -254,7 +254,14 @@ class TrackSegment(object):
         return (self.end_of_line_jump or self), direction * -1
 
     def required_by_train(self):
+
         for train in self.rail.trains:
+            if train.current_segment == self:
+                return True
+
+            if train.end_of_life:
+                continue
+
             segment, direction = train.current_segment, train.direction
             while segment not in self.rail.segments:
                 if segment == self:

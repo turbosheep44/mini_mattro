@@ -6,6 +6,9 @@ class Data(object):
     NEXT_COLOR = 0
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.stations: 'list[Station]' = []
         self.rails: 'list[Rail]' = []
 
@@ -15,6 +18,7 @@ class Data(object):
         self.score: int = 0
         self.available_trains = 5
         self.available_train_upgrades = 3
+        self.reset_color()
 
     def next_color(self):
         color = Data.NEXT_COLOR
@@ -31,9 +35,3 @@ class Data(object):
 
 
 data: Data = Data()
-
-
-def reset_data():
-    global data
-    data = Data()
-    data.reset_color()

@@ -90,11 +90,11 @@ class Agent:
 
     def train_short_memory(self, state, action, reward, next_state, done):
         self.trainer.train_step(state, action, reward, next_state, done)
-    
-    def get_station_rail_actions(self,mode,prediction=None):
+
+    def get_station_rail_actions(self, mode, prediction=None):
         station_action = [0] * 8
         rail_action = [0] * 3
-        
+
         if prediction != None:
             station_prediction = prediction[6:len(self.data.stations)+6]
             rail_prediction = prediction[len(self.data.stations)+6:len(prediction)]
@@ -103,7 +103,7 @@ class Agent:
             return station_action, rail_action
         elif mode == 1:
             if prediction == None:
-                s1,s2 = random.sample(range(8), 2)
+                s1, s2 = random.sample(range(8), 2)
                 station_action[s1] = 1
                 station_action[s2] = 1
             else:
@@ -111,7 +111,7 @@ class Agent:
                 s1 = stations[0].item()
                 s2 = stations[1].item()
                 station_action[s1] = 1
-                station_action[s2] = 1               
+                station_action[s2] = 1
         elif mode == 2:
             if prediction == None:
                 s1 = random.randint(0, 7)
@@ -119,7 +119,7 @@ class Agent:
             else:
                 s1 = torch.argmax(station_prediction).item()
                 station_action[s1] = 1
-        
+
         if prediction == None:
             r = random.randint(0, 2)
             rail_action[r] = 1
@@ -129,12 +129,12 @@ class Agent:
 
         return station_action, rail_action
 
-
     # * SHOULD BE OK
+
     def get_action(self, state):
         self.epsilon = GAME_COUNT - self.n_games
         mode_action = [0] * 6
-        
+
         if random.randint(0, 200) < self.epsilon:
             mode = random.randint(0, 5)
             mode_action[mode] = 1
@@ -159,7 +159,7 @@ def train():
     plot_mean_scores = []
     total_score = 0
     record = 0
-    game = MiniMattroAI()
+    game = MiniMattroAI(show_frames=120)
     agent = Agent(data)
     while True:
         # get old state
@@ -180,18 +180,19 @@ def train():
         agent.remember(state_old, action, reward, state_new, done)
 
         if done:
+            super_cool_score_probably_winning = data.score
             game.reset()
             agent.n_games += 1
             agent.train_long_memory()
 
-            if data.score > record:
-                record = score
+            if super_cool_score_probably_winning > record:
+                record = super_cool_score_probably_winning
                 agent.model.save()
 
-            print('Game', agent.n_games, 'Score', data.score, 'Record:', record)
+            print('Game', agent.n_games, 'Score', super_cool_score_probably_winning, 'Record:', record)
 
-            plot_scores.append(data.score)
-            total_score += data.score
+            plot_scores.append(super_cool_score_probably_winning)
+            total_score += super_cool_score_probably_winning
             mean_score = total_score / agent.n_games
             plot_mean_scores.append(mean_score)
             helper.plot(plot_scores, plot_mean_scores)

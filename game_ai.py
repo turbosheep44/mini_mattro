@@ -51,6 +51,8 @@ class MiniMattroAI(MiniMattro):
             elif event.type == SCORE_POINT:
                 self.reward += 1
 
+        reward -= sum(len(s.passengers) for s in data.stations) * 0.1
+
     def do_action(self, action):
         if type(action) == type(None):
             return
