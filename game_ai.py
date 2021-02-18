@@ -22,7 +22,7 @@ class Mode(enum.Enum):
 
 class MiniMattroAI(MiniMattro):
 
-    def __init__(self, simulated_speed: int = 10):
+    def __init__(self, simulated_speed: int = 60):
         super().__init__()
         self.simulated_speed: int = simulated_speed
         self.frames: int = 0
@@ -67,11 +67,13 @@ class MiniMattroAI(MiniMattro):
             self.add_train(rail)
 
         elif mode == Mode.UpgradeTrain:
-            u_train = rail.get_upgradable()
+            u_train = data.rails[rail].get_upgradable()
             self.upgrade_train(u_train)
 
         elif mode == Mode.DeleteTrain:
-            self.delete_train(random.choice(rail.trains))
+            if len(data.rails[rail].trains) > 0:
+                self.delete_train(random.choice(data.rails[rail].trains))
+            
 
     def interpret_action(self, action):
 
@@ -119,8 +121,9 @@ if __name__ == '__main__':
 
     while True:
 
-        a_0 = np.array([1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1])
-        game_over, reward = game.play_step(None)
+        # Connect s1 with s2
+        a_0 = np.array([1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+        game_over, reward = game.play_step(a_0)
 
         # a_1 = np.array([1,0,0,1,0,1,0,0,0,0,1,0,0])
         # game_over = game.play_step(a_1)

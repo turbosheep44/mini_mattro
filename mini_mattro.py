@@ -105,7 +105,7 @@ class MiniMattro(ABC):
         for r in data.rails:
             r.draw(self.layers)
 
-        if self.tmp_segment:
+        if hasattr(self, "tmp_segment") and self.tmp_segment:
             self.tmp_segment.draw(self.layers[RAIL_LAYER])
 
         for s in data.stations:
@@ -166,7 +166,7 @@ class MiniMattro(ABC):
         pg.event.post(pg.event.Event(TRAINS_CHANGED))
 
     def upgrade_train(self, train: Train):
-        if data.available_train_upgrades < 1 and not train.is_upgraded:
+        if train and data.available_train_upgrades < 1 and not train.is_upgraded:
             return
 
         data.available_train_upgrades -= 1
@@ -191,7 +191,7 @@ class MiniMattro(ABC):
         rail.add_segment(segment, data.stations)
 
     def remove_station(self, s: int, r: int):
-        if not data.active_rail.can_remove_station(s):
+        if not data.rails[r].can_remove_station(s):
             print("invalid remove action")
             return
 

@@ -105,6 +105,11 @@ class Agent:
 			mode = random.randint(0, 4)
 			mode_action[mode] = 1
 
+			if mode == 2:
+				s_sample = random.sample(range(8), 1)
+				s1 = s_sample[0]
+				station_action[s1] = 1
+			
 			s_sample = random.sample(range(8), 2)
 			s1 = s_sample[0]
 			s2 = s_sample[1]
@@ -124,6 +129,8 @@ class Agent:
 
 			mode = torch.argmax(mode_prediction).item()
 			mode_action[mode] = 1
+
+			if mode == 
 
 			stations = torch.topk(station_prediction, k=2)[1]
 			s1 = stations[0].item()
@@ -153,7 +160,7 @@ def train():
 
 		# perform move and get new state
 		# print(action)
-		reward, done, score = game.play_step(action)
+		done, reward = game.play_step(action)
 		state_new = agent.get_state()
 
 		# train short memory
@@ -167,14 +174,14 @@ def train():
 			agent.n_games += 1
 			agent.train_long_memory()
 
-			if score > record:
+			if data.score > record:
 				record = score
 				agent.model.save()
 
-			print('Game', agent.n_games, 'Score', score, 'Record:', record)
+			print('Game', agent.n_games, 'Score', data.score, 'Record:', record)
 
-			plot_scores.append(score)
-			total_score += score
+			plot_scores.append(data.score)
+			total_score += data.score
 			mean_score = total_score / agent.n_games
 			plot_mean_scores.append(mean_score)
 			helper.plot(plot_scores, plot_mean_scores)

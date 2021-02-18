@@ -9,7 +9,7 @@ class Passenger(object):
 
     def __init__(self, shape: Shape):
         self.shape = shape
-        self.startTime = time()
+        self.is_boarding:bool = False
 
     def draw(self, surface, location, offset):
         location = Vector2(location.x + (15 * offset), location.y)
