@@ -31,7 +31,7 @@ class MiniMattro(ABC):
         self.layers = [pg.Surface((self.w, self.h), pg.SRCALPHA) for _ in range(5)]
 
     def reset(self):
-        reset_data()
+        data.reset()
         data.stations = [Station(Shape.CIRCLE, Vector2(125, 100)),
                          Station(Shape.CIRCLE, Vector2(350, 150)),
                          Station(Shape.CIRCLE, Vector2(300, 350)),
@@ -90,7 +90,7 @@ class MiniMattro(ABC):
 
         # CHECK GAME OVER
         for s in data.stations:
-            if s.update():
+            if s.update(dt):
                 return True
 
         return False
@@ -183,7 +183,7 @@ class MiniMattro(ABC):
     def connect(self, s1: int, s2: int, r: int):
         rail = data.rails[r]
         if not rail.is_station_valid(s1) or rail.is_on_rail(s2):
-            print("invalid connect action")
+            # print("invalid connect action")
             return
 
         segment = TrackSegment(rail, data.stations[s1].location, (s1, None))
@@ -192,7 +192,7 @@ class MiniMattro(ABC):
 
     def remove_station(self, s: int, r: int):
         if not data.rails[r].can_remove_station(s):
-            print("invalid remove action")
+            # print("invalid remove action")
             return
 
         data.rails[r].remove_station(s, data.stations)

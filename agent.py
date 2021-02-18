@@ -129,8 +129,6 @@ class Agent:
 
         return station_action, rail_action
 
-    # * SHOULD BE OK
-
     def get_action(self, state):
         self.epsilon = GAME_COUNT - self.n_games
         mode_action = [0] * 6
@@ -159,25 +157,22 @@ def train():
     plot_mean_scores = []
     total_score = 0
     record = 0
-    game = MiniMattroAI(show_frames=120)
+    game = MiniMattroAI(show_frames=10)
     agent = Agent(data)
+
     while True:
-        # get old state
+
         state_old = agent.get_state()
-
-        # get move
         action = agent.get_action(state_old)
-
-        # perform move and get new state
-        # print(action)
         done, reward = game.play_step(action)
         state_new = agent.get_state()
-
-        # train short memory
         agent.train_short_memory(state_old, action, reward, state_new, done)
-
-        # remember
         agent.remember(state_old, action, reward, state_new, done)
+
+        steps_without_action = 0
+        while not done and steps_without_action < 59:
+            done, _ = game.play_step(None)
+            steps_without_action += 1
 
         if done:
             super_cool_score_probably_winning = data.score

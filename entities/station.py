@@ -23,25 +23,26 @@ class Station(object):
     def create_passenger(self, shape):
         self.passengers.append(Passenger(shape))
 
-    def update(self):
-        # for p in self.passengers:
-        #     p.update()
+    def update(self, dt):
 
-        if(self.losing):
+        if self.losing:
             pg.event.post(pg.event.Event(LOSE_POINT))
-            if time() - self.loseTime > LOSE_DELAY:
+            self.loseTime -= dt
+            if self.loseTime < 0:
                 return True
 
         if len(self.passengers) >= PASSENGER_LOSE and not(self.losing):
             self.losing = True
-            self.loseTime = time()
+            self.loseTime = LOSE_DELAY
 
         if len(self.passengers) < PASSENGER_LOSE:
             self.losing = False
 
+        return False
+
     def draw(self, surface):
         if self.losing:
-            lost = (time() - self.loseTime) / LOSE_DELAY
+            lost = (LOSE_DELAY - self.loseTime) / LOSE_DELAY
             pg.draw.arc(surface, (120, 0, 0), (self.location.x-35, self.location.y-35, 70, 70),  (1-lost)*pi*2 + pi/2, pi/2, width=4)
 
         passenger_location = Vector2(self.location.x + 25, self.location.y - 18)
