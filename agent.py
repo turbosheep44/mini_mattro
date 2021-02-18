@@ -92,14 +92,22 @@ class Agent:
 
     def train_short_memory(self, state, action, reward, next_state, done):
         self.trainer.train_step(state, action, reward, next_state, done)
+    
+    def get_action_two(self,mode,random = False):
+        station_action = [0] * 8
+        rail_action = [0] * 3
+        
+        if mode == 0:
+            return station_action, rail_action
+        elif mode == 1:
+            if random:
+               s_sample = random.sample(range(8), 1)
+            return 
+
 
     # * SHOULD BE OK
     def get_action(self, state):
         self.epsilon = GAME_COUNT - self.n_games
-
-        mode_action = [0, 0, 0, 0, 0, 0]
-        station_action = [0, 0, 0, 0, 0, 0, 0, 0]
-        rail_action = [0, 0, 0]
 
         if random.randint(0, 200) < self.epsilon:
             mode = random.randint(0, 4)
