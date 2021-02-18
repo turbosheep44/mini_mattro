@@ -36,3 +36,4 @@ data: Data = Data()
 def reset_data():
     global data
     data = Data()
+    data.reset_color()

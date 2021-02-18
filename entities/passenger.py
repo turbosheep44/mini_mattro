@@ -9,9 +9,7 @@ class Passenger(object):
 
     def __init__(self, shape: Shape):
         self.shape = shape
-        self.startTime = time()
-        self.penalised = False
-        self.is_boarding = False
+        self.is_boarding:bool = False
 
     def draw(self, surface, location, offset):
         location = Vector2(location.x + (15 * offset), location.y)
@@ -25,11 +23,3 @@ class Passenger(object):
             return True
         else:
             return False
-
-    # def update(self):
-    #     if time()-self.startTime > 5 and not self.penalised:
-    #         self.penalised = True
-    #         self.startTime = time()
-    #         pg.event.post(pg.event.Event(LOSE_POINT))
-    #     if time()-self.startTime > 5 and self.penalised:
-    #         self.penalised = False

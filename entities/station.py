@@ -1,6 +1,6 @@
 from pygame import color
 from entities import passenger
-from util.constants import LOSE_DELAY, PASSENGER_LOSE
+from util.constants import LOSE_DELAY, LOSE_POINT, PASSENGER_LOSE
 from util.draw import Shape
 from entities.passenger import Passenger
 import pygame as pg
@@ -28,6 +28,7 @@ class Station(object):
         #     p.update()
 
         if(self.losing):
+            pg.event.post(pg.event.Event(LOSE_POINT))
             if time() - self.loseTime > LOSE_DELAY:
                 return True
 

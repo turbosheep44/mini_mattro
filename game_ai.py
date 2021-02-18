@@ -22,11 +22,11 @@ class Mode(enum.Enum):
 
 class MiniMattroAI(MiniMattro):
 
-    def __init__(self, simulated_speed: int):
+    def __init__(self, simulated_speed: int = 60):
         super().__init__()
         self.simulated_speed: int = simulated_speed
-        self.frames = 0
-        self.tmp_segment: TrackSegment = None
+        self.frames: int = 0
+        self.reward: int = 0
 
     def play_step(self, action):
 
@@ -39,10 +39,15 @@ class MiniMattroAI(MiniMattro):
             self.draw()
             self.frames = 0
 
-        return game_over
+        return game_over, self.reward
 
     def handle_events(self, events: 'list[Event]') -> None:
-        pass
+        self.reward = 0
+        for event in events:
+            if event.type == LOSE_POINT:
+                self.reward -= 10
+            elif event.type == SCORE_POINT:
+                self.reward += 1
 
     def do_action(self, action):
 
@@ -53,7 +58,7 @@ class MiniMattroAI(MiniMattro):
             return
         elif mode == Mode.Connect:
             #print("AI has chosen to connect a segment!")
-            self.connect(stations, rail)
+            self.connect(stations[0], stations[1], rail)
         elif mode == Mode.Disconnect:
             #print("AI has chosen to disconnect a segment!")
             self.remove_station(stations, rail)
@@ -62,11 +67,13 @@ class MiniMattroAI(MiniMattro):
             self.add_train(rail)
 
         elif mode == Mode.UpgradeTrain:
-            u_train = rail.get_upgradable()
+            u_train = data.rails[rail].get_upgradable()
             self.upgrade_train(u_train)
 
         elif mode == Mode.DeleteTrain:
-            self.delete_train(random.choice(rail.trains))
+            if len(data.rails[rail].trains) > 0:
+                self.delete_train(random.choice(data.rails[rail].trains))
+            
 
     def interpret_action(self, action):
 
@@ -115,8 +122,9 @@ if __name__ == '__main__':
 
     while True:
 
-        a_0 = np.array([1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1])
-        game_over = game.play_step(None)
+        # Connect s1 with s2
+        a_0 = np.array([1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+        game_over, reward = game.play_step(a_0)
 
         # a_1 = np.array([1,0,0,1,0,1,0,0,0,0,1,0,0])
         # game_over = game.play_step(a_1)
