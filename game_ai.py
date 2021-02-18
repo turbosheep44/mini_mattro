@@ -81,18 +81,19 @@ class MiniMattroAI(MiniMattro):
         rail_action = action[len(data.stations)+6:len(action)]
 
         # Interpret mode, if Mode.DoNothing then no need for further interpretation
-        if np.array_equal(mode_action, [0, 0, 1, 0, 0, 0]):
+        mode_index = np.argmax(mode_action)
+        if mode_index == 0:
             mode = Mode.DoNothing
             return mode, (s1, s2), r
-        elif np.array_equal(mode_action, [1, 0, 0, 0, 0, 0]):
+        elif mode_index == 1:
             mode = Mode.Connect
-        elif np.array_equal(mode_action, [0, 1, 0, 0, 0, 0]):
+        elif mode_index == 2:
             mode = Mode.Disconnect
-        elif np.array_equal(mode_action, [0, 0, 0, 1, 0, 0]):
+        elif mode_index == 3:
             mode = Mode.AddTrain
-        elif np.array_equal(mode_action, [0, 0, 0, 0, 1, 0]):
+        elif mode_index == 4:
             mode = Mode.UpgradeTrain
-        elif np.array_equal(mode_action, [0, 0, 0, 0, 0, 1]):
+        elif mode_index == 5:
             mode = Mode.DeleteTrain
 
         # Interpret stations
