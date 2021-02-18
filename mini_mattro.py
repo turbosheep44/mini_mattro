@@ -11,7 +11,7 @@ import pygame as pg
 pg.init()
 pg.font.init()
 font = pg.font.SysFont('OpenSans-Regular', 24)
-FPS = 120
+FPS = 60
 
 
 class MiniMattro(ABC):

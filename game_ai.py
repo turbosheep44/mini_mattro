@@ -1,4 +1,4 @@
-from mini_mattro import MiniMattro
+from mini_mattro import FPS, MiniMattro
 import pygame as pg
 import random
 from pygame.constants import K_SPACE
@@ -22,20 +22,22 @@ class Mode(enum.Enum):
 
 class MiniMattroAI(MiniMattro):
 
-    def __init__(self, simulated_speed: int = 60):
+    def __init__(self, simulated_speed: int = 60, normal_speed: bool = True, show_frames: int = 10):
         super().__init__()
         self.simulated_speed: int = simulated_speed
+        self.normal_speed: bool = normal_speed
+        self.show_frames: int = show_frames
         self.frames: int = 0
         self.reward: int = 0
 
     def play_step(self, action):
 
-        dt = 1/self.simulated_speed
+        dt = 1/self.simulated_speed if not self.normal_speed else self.clock.tick(FPS) / 1000
         self.frames += 1
         self.do_action(action)
         game_over = self.update(dt)
 
-        if self.frames == 10:
+        if self.frames == self.show_frames or self.normal_speed:
             self.draw()
             self.frames = 0
 
@@ -50,6 +52,8 @@ class MiniMattroAI(MiniMattro):
                 self.reward += 1
 
     def do_action(self, action):
+        if type(action) == type(None):
+            return
 
         mode, stations, rail = self.interpret_action(action)
 
@@ -73,7 +77,6 @@ class MiniMattroAI(MiniMattro):
         elif mode == Mode.DeleteTrain:
             if len(data.rails[rail].trains) > 0:
                 self.delete_train(random.choice(data.rails[rail].trains))
-            
 
     def interpret_action(self, action):
 
@@ -117,13 +120,16 @@ class MiniMattroAI(MiniMattro):
 
 
 if __name__ == '__main__':
-    game = MiniMattroAI(60)
+    game = MiniMattroAI(60, True)
+
+    a_0 = np.array([1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+    game_over, reward = game.play_step(a_0)
 
     while True:
 
         # Connect s1 with s2
-        a_0 = np.array([1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
-        game_over, reward = game.play_step(a_0)
+        # a_0 = np.array([1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1])
+        game_over, reward = game.play_step(None)
 
         # a_1 = np.array([1,0,0,1,0,1,0,0,0,0,1,0,0])
         # game_over = game.play_step(a_1)
