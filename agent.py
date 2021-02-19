@@ -137,7 +137,7 @@ class Agent:
         self.epsilon = GAME_COUNT - self.n_games
         mode_action = [0] * 6
 
-        if random.randint(0, 200) < self.epsilon or train:
+        if random.randint(0, 200) < self.epsilon and train:
             mode = random.randint(0, 5)
             mode_action[mode] = 1
 
