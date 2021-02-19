@@ -26,11 +26,11 @@ class Agent:
         self.model = model.Linear_QNet(136, 256, 17)
         self.trainer = model.QTrainer(self.model, lr=LR, gamma=self.gamma)
         self.data = data
-        self.distance_state = self.get_distance_state()
+        self.distance_state = []
 
     def get_state(self):
 
-        state = self.get_rails_state() + self.distance_state + self.get_passenger_state()
+        state = self.get_rails_state() + self.get_distance_state() + self.get_passenger_state()
 
         return np.array(state, dtype=int)
 
@@ -49,12 +49,16 @@ class Agent:
         return np.concatenate(p_states).ravel().tolist()
 
     def get_distance_state(self):
-        C = list(itertools.combinations(self.data.stations, 2))
+        if self.distance_state != []:
+            return self.distance_state
+
+        C = list(itertools.combinations(data.stations, 2))
         distance_state = []
 
         for c in C:
             distance_state.append(int(math.sqrt((c[0].location.x - c[1].location.x)**2 + (c[0].location.y-c[1].location.y)**2)))
 
+        self.distance_state = distance_state
         return distance_state
 
     def get_rails_state(self):
@@ -129,11 +133,11 @@ class Agent:
 
         return station_action, rail_action
 
-    def get_action(self, state):
+    def get_action(self, state, train = True):
         self.epsilon = GAME_COUNT - self.n_games
         mode_action = [0] * 6
 
-        if random.randint(0, 200) < self.epsilon:
+        if random.randint(0, 200) < self.epsilon or train:
             mode = random.randint(0, 5)
             mode_action[mode] = 1
 
@@ -152,13 +156,16 @@ class Agent:
         return np.array(mode_action + station_action + rail_action)
 
 
-def train():
+def train(model, load = False):
     plot_scores = []
     plot_mean_scores = []
     total_score = 0
     record = 0
     game = MiniMattroAI(show_frames=10)
     agent = Agent(data)
+    
+    if load == True:
+        agent.model.load_state_dict(torch.load(f"model/{model}.pth"))
 
     while True:
 
@@ -182,7 +189,7 @@ def train():
 
             if super_cool_score_probably_winning > record:
                 record = super_cool_score_probably_winning
-                agent.model.save()
+                agent.model.save(file_name=f'{model}.pth')
 
             print('Game', agent.n_games, 'Score', super_cool_score_probably_winning, 'Record:', record)
 
@@ -190,8 +197,40 @@ def train():
             total_score += super_cool_score_probably_winning
             mean_score = total_score / agent.n_games
             plot_mean_scores.append(mean_score)
-            helper.plot(plot_scores, plot_mean_scores)
+            helper.plot(plot_scores, plot_mean_scores, model=model)
+
+def test(model):
+    agent = Agent(data)
+    game = MiniMattroAI(show_frames=10)     
+    agent.model.load_state_dict(torch.load(f"model/{model}.pth"))
+    record = 0
+
+    while True:
+        state_old = agent.get_state()
+        action = agent.get_action(state_old, train=False)
+        done, reward = game.play_step(action)
+
+        steps_without_action = 0
+        while not done and steps_without_action < 59:
+            done, _ = game.play_step(None)
+            steps_without_action += 1
+
+        if done:
+            super_cool_score_probably_winning = data.score
+            game.reset()
+            agent.n_games += 1
+
+            if super_cool_score_probably_winning > record:
+                record = super_cool_score_probably_winning
+            print('Game', agent.n_games, 'Score', super_cool_score_probably_winning, 'Record:', record)
 
 
 if __name__ == '__main__':
-    train()
+    # Train from beginning, save as model1.pth
+    train(model = "model1", load = False)
+
+    # Train from loaded model, load from model1.pth
+    #train(model = "model1", load = True)
+
+    # Test loaded model, load from model1.pth
+    #test(model = "model1")
