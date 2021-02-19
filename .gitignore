@@ -6,3 +6,4 @@ exercises/
 __pycache__/
 *.pyc
 plots/*
+*.pth
