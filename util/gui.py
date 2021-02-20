@@ -43,6 +43,9 @@ class GUI(object):
         self.set_trains(data.rails[i])
 
     def set_trains(self, rail: Rail):
+        if rail == None:
+            print("strange error")
+            return
         self.train_block.set_children([self.__add_train_group]+[train(t) for t in rail.trains])
 
     def update_values(self):

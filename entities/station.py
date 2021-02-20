@@ -26,7 +26,6 @@ class Station(object):
     def update(self, dt):
 
         if self.losing:
-            pg.event.post(pg.event.Event(LOSE_POINT))
             self.loseTime -= dt
             if self.loseTime < 0:
                 return True

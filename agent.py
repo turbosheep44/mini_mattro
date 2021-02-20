@@ -1,207 +1,165 @@
+from typing import Tuple
 import torch
-import random
 import numpy as np
 from collections import deque
-from game_ai import MiniMattroAI
+
+import matplotlib.pyplot as plt
+from torch import optim
+import torch.nn.functional as F
+from game_ai import MiniMattroAI, Mode
 from util import *
 from ai import model
-from ai import helper
 from util.data import data
-import itertools
-import math
 
 MAX_MEMORY = 100_000
-BATCH_SIZE = 1000
-LR = 0.001
-GAME_COUNT = 80
+MEMORY_THRESHOLD = 1024
+BATCH_SIZE = 128
+
+LR = 0.0001
+GAMMA = 0.9
+
+EPSILON_INITIAL = 1
+EPSILON_FINAL = 0.001
+EPSILON_STEPS = 5000
+
+DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+RANDOM: np.random.RandomState = np.random.RandomState()
+ACTIONS: 'list[Tuple[int, Tuple]]' = []
 
 
 class Agent:
 
-    def __init__(self, data):
-        self.n_games = 0
-        self.epsilon = 0  # randomness
-        self.gamma = 0.9  # discount rate
-        self.memory = deque(maxlen=MAX_MEMORY)  # popleft()
-        self.model = model.Linear_QNet(136, 256, 17)
-        self.trainer = model.QTrainer(self.model, lr=LR, gamma=self.gamma)
-        self.data = data
-        self.distance_state = []
+    def __init__(self, state_size, num_actions):
+        self._num_actions = num_actions
+        self.epsilon = EPSILON_INITIAL
+        self._steps = 0
+        self._updates = 0
+        self.loss_values = []
 
-    def get_state(self):
+        self.memory = deque(maxlen=MAX_MEMORY)
+        self.model = model.QValueModel(state_size, num_actions, DEVICE)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=LR, momentum=0.8, weight_decay=4e-3)
+        self.loss_func = F.mse_loss
 
-        state = self.get_rails_state() + self.get_distance_state() + self.get_passenger_state()
+    def step(self, state, action, reward, next_state, game_over):
+        # put this step in memory
+        self.memory.append((state, action, reward, next_state, game_over))
 
-        return np.array(state, dtype=int)
+        # dont start training until there are enough steps for a batch
+        if len(self.memory) < BATCH_SIZE or len(self.memory) < MEMORY_THRESHOLD:
+            return
 
-    def get_passenger_state(self):
-        p_states = []
-        for s in self.data.stations:
-            temp = [0, 0, 0]
-            for p in s.passengers:
-                if p.shape == Shape.CIRCLE:
-                    temp[0] += 1
-                elif p.shape == Shape.SQUARE:
-                    temp[1] += 1
-                else:
-                    temp[2] += 1
-            p_states.append(temp)
-        return np.concatenate(p_states).ravel().tolist()
+        # only train every BATCH_SIZE/20 steps
+        self._steps += 1
+        if self._steps < BATCH_SIZE/20:
+            return
+        self._steps = 0
+        self._updates += 1
 
-    def get_distance_state(self):
-        if self.distance_state != []:
-            return self.distance_state
+        # sample memory
+        sample = RANDOM.choice(range(len(self.memory)), size=BATCH_SIZE, replace=False)
+        states, actions, rewards, next_states, dones = zip(*[self.memory[el] for el in sample])
+        self.train_step(states, actions, rewards, next_states, dones)
 
-        C = list(itertools.combinations(data.stations, 2))
-        distance_state = []
+    def end_episode(self):
+        self.epsilon -= (EPSILON_INITIAL - EPSILON_FINAL)/EPSILON_STEPS
+        self.epsilon = max(self.epsilon, EPSILON_FINAL)
 
-        for c in C:
-            distance_state.append(int(math.sqrt((c[0].location.x - c[1].location.x)**2 + (c[0].location.y-c[1].location.y)**2)))
+    def act(self, state) -> np.ndarray:
 
-        self.distance_state = distance_state
-        return distance_state
-
-    def get_rails_state(self):
-
-        number_of_stations = len(data.stations)
-        state = np.zeros((number_of_stations, number_of_stations, 3), dtype=bool)
-
-        for current_rail, rail in enumerate(data.rails):
-            for segment in rail.segments:
-
-                beginning = segment.stations[0]
-                end = segment.stations[1]
-                state[beginning, end, current_rail] = True
-                state[end, beginning, current_rail] = True
-
-        final_rails_state = []
-        for i in range(number_of_stations-1):
-            final_rails_state = final_rails_state + state[i][(-((number_of_stations) - (i+1))):].flatten().tolist()
-
-        return final_rails_state
-
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
-
-    def train_long_memory(self):
-        if len(self.memory) > BATCH_SIZE:
-            mini_sample = random.sample(self.memory, BATCH_SIZE)
+        if RANDOM.uniform() < self.epsilon:
+            actions = np.zeros(self._num_actions)
+            actions[RANDOM.choice(self._num_actions)] = 1
+            return actions
         else:
-            mini_sample = self.memory
+            state = torch.tensor(state, dtype=torch.float).to(DEVICE)
+            return self.model(state).detach().cpu().numpy()
 
-        states, actions, rewards, next_states, dones = zip(*mini_sample)
-        self.trainer.train_step(states, actions, rewards, next_states, dones)
+    def train_step(self, state, action, reward, next_state, done):
+        # convert to tensors
+        state = torch.tensor(state, dtype=torch.float).to(DEVICE)
+        next_state = torch.tensor(next_state, dtype=torch.float).to(DEVICE)
+        action = torch.tensor(action).to(DEVICE)
+        reward = torch.tensor(reward, dtype=torch.float).to(DEVICE)
 
-    def train_short_memory(self, state, action, reward, next_state, done):
-        self.trainer.train_step(state, action, reward, next_state, done)
+        # predicted Q values with current state
+        pred = self.model(state)
 
-    def get_station_rail_actions(self, mode, prediction=None):
-        station_action = [0] * 8
-        rail_action = [0] * 3
+        # actual Q value = reward + (discount * maxQ(next_state))
+        target = pred.clone()
+        for idx in range(len(done)):
+            Q_new = reward[idx]
+            if not done[idx]:
+                Q_new = reward[idx] + (GAMMA * torch.max(self.model(next_state[idx])))
 
-        if prediction != None:
-            station_prediction = prediction[6:len(self.data.stations)+6]
-            rail_prediction = prediction[len(self.data.stations)+6:len(prediction)]
+            target[idx][torch.argmax(action[idx]).item()] = Q_new
 
-        if mode == 0:
-            return station_action, rail_action
-        elif mode == 1:
-            if prediction == None:
-                s1, s2 = random.sample(range(8), 2)
-                station_action[s1] = 1
-                station_action[s2] = 1
-            else:
-                stations = torch.topk(station_prediction, k=2)[1]
-                s1 = stations[0].item()
-                s2 = stations[1].item()
-                station_action[s1] = 1
-                station_action[s2] = 1
-        elif mode == 2:
-            if prediction == None:
-                s1 = random.randint(0, 7)
-                station_action[s1] = 1
-            else:
-                s1 = torch.argmax(station_prediction).item()
-                station_action[s1] = 1
+        # calculate loss over the batch and weight gradients then optimise
+        self.optimizer.zero_grad()
+        loss = self.loss_func(target, pred)
+        loss.backward()
+        self.optimizer.step()
 
-        if prediction == None:
-            r = random.randint(0, 2)
-            rail_action[r] = 1
-        else:
-            r = torch.argmax(rail_prediction).item()
-            rail_action[r] = 1
-
-        return station_action, rail_action
-
-    def get_action(self, state, train = True):
-        self.epsilon = GAME_COUNT - self.n_games
-        mode_action = [0] * 6
-
-        if random.randint(0, 200) < self.epsilon or train:
-            mode = random.randint(0, 5)
-            mode_action[mode] = 1
-
-            station_action, rail_action = self.get_station_rail_actions(mode)
-
-        else:
-            state0 = torch.tensor(state, dtype=torch.float)
-            prediction = self.model(state0)
-
-            mode_prediction = prediction[:6]
-            mode = torch.argmax(mode_prediction).item()
-            mode_action[mode] = 1
-
-            station_action, rail_action = self.get_station_rail_actions(mode, prediction)
-
-        return np.array(mode_action + station_action + rail_action)
+        if self._updates % 100 == 0:
+            self.loss_values.append(loss.item())
 
 
-def train(model, load = False):
-    plot_scores = []
-    plot_mean_scores = []
-    total_score = 0
-    record = 0
-    game = MiniMattroAI(show_frames=10)
-    agent = Agent(data)
-    
+def plot_loss(agent):
+    plt.clf()
+    plt.title(f'Loss\n' +
+              f'batch={BATCH_SIZE} epsilon_initail={EPSILON_INITIAL} epsilon_final={EPSILON_FINAL} epsilon_steps={EPSILON_STEPS}\n' +
+              f'gamma={GAMMA} learning_rate={LR} optimiser={type(agent.optimizer).__name__} loss_func={agent.loss_func.__name__}')
+    plt.xlabel('Training steps x100')
+    plt.ylabel('Loss')
+    plt.plot(agent.loss_values)
+    plt.show(block=False)
+    plt.pause(.001)
+
+
+def train(model, load=False):
+    # init envrionment and agent
+    env = MiniMattroAI(show_frames=10000, frames_per_step=60)
+    agent = Agent(len(env.get_state()), len(ACTIONS))
+
     if load == True:
         agent.model.load_state_dict(torch.load(f"model/{model}.pth"))
 
-    while True:
+    record = 0
+    for i in range(EPSILON_STEPS+100):
+        # reset the game envrionment
+        env.reset()
 
-        state_old = agent.get_state()
-        action = agent.get_action(state_old)
-        done, reward = game.play_step(action)
-        state_new = agent.get_state()
-        agent.train_short_memory(state_old, action, reward, state_new, done)
-        agent.remember(state_old, action, reward, state_new, done)
+        # get the initial state and action
+        state = env.get_state()
+        action_q_values = agent.act(state)
+        game_over = False
 
-        steps_without_action = 0
-        while not done and steps_without_action < 59:
-            done, _ = game.play_step(None)
-            steps_without_action += 1
+        while not game_over:
+            # perform the action and identify the reward and resulting state
+            action, params = ACTIONS[np.argmax(action_q_values)]
+            game_over, reward = env.play_step(action, params)
+            next_state = env.get_state()
 
-        if done:
-            super_cool_score_probably_winning = data.score
-            game.reset()
-            agent.n_games += 1
-            agent.train_long_memory()
+            # add this (state + action -> next_state) object to agent memory
+            agent.step(state, action_q_values, reward, next_state, game_over)
 
-            if super_cool_score_probably_winning > record:
-                record = super_cool_score_probably_winning
-                agent.model.save(file_name=f'{model}.pth')
+            # get update state and get next action
+            state = next_state
+            action_q_values = agent.act(state)
 
-            print('Game', agent.n_games, 'Score', super_cool_score_probably_winning, 'Record:', record)
+        # decay epsilon
+        agent.end_episode()
+        if data.score > record:
+            record = data.score
+        print(f"{i:4})  -> {data.score:3} | {record:3}")
+        plot_loss(agent)
 
-            plot_scores.append(super_cool_score_probably_winning)
-            total_score += super_cool_score_probably_winning
-            mean_score = total_score / agent.n_games
-            plot_mean_scores.append(mean_score)
-            helper.plot(plot_scores, plot_mean_scores, model=model)
+    agent.model.save(file_name=f"model/{model}.py")
+
 
 def test(model):
     agent = Agent(data)
-    game = MiniMattroAI(show_frames=10)     
+    game = MiniMattroAI(show_frames=10)
     agent.model.load_state_dict(torch.load(f"model/{model}.pth"))
     record = 0
 
@@ -222,15 +180,30 @@ def test(model):
 
             if super_cool_score_probably_winning > record:
                 record = super_cool_score_probably_winning
-            print('Game', agent.n_games, 'Score', super_cool_score_probably_winning, 'Record:', record)
+            print('Game', agent.n_games, 'Score',
+                  super_cool_score_probably_winning, 'Record:', record)
+
+
+def populate_actions():
+    # one action for 'do nothing'
+    ACTIONS.append((Mode.DoNothing.value, None))
+
+    # for each of 3 rails
+    for rail in range(3):
+        # add, remove and upgrade
+        ACTIONS.append((Mode.AddTrain.value, (rail,)))
+        ACTIONS.append((Mode.DeleteTrain.value, (rail,)))
+        ACTIONS.append((Mode.UpgradeTrain.value, (rail,)))
+
+        for station in range(8):
+            # disconnect any one of the stations
+            ACTIONS.append((Mode.Disconnect.value, (rail, station)))
+
+            # connect any 2 stations
+            for other in range(station + 1, 8):
+                ACTIONS.append((Mode.Connect.value, (rail, station, other)))
 
 
 if __name__ == '__main__':
-    # Train from beginning, save as model1.pth
-    train(model = "model1", load = False)
-
-    # Train from loaded model, load from model1.pth
-    #train(model = "model1", load = True)
-
-    # Test loaded model, load from model1.pth
-    #test(model = "model1")
+    populate_actions()
+    train(model="model", load=False)

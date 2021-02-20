@@ -140,7 +140,7 @@ class MiniMattro(ABC):
     def passenger(self, dt):
         self.passenger_spawn += dt
 
-        if self.passenger_spawn > 2:
+        if self.passenger_spawn > PASSENGER_SPAWN:
 
             randomStation = random.choice(data.stations)
             randomPassenger = random.choice(list(Shape))
@@ -156,22 +156,24 @@ class MiniMattro(ABC):
         data.rails.append(Rail(COLORS[data.next_color()]))
         self.gui.append_rail(data.rails[-1])
 
-    def add_train(self, r: int):
+    def add_train(self, r: int) -> bool:
         rail: Rail = data.rails[r]
         if data.available_trains < 1 or len(rail.segments) < 1:
-            return
+            return False
 
         data.available_trains -= 1
         rail.trains.append(Train(random.choice(rail.segments)))
         pg.event.post(pg.event.Event(TRAINS_CHANGED))
+        return True
 
-    def upgrade_train(self, train: Train):
+    def upgrade_train(self, train: Train) -> bool:
         if not train or data.available_train_upgrades < 1 or train.is_upgraded:
-            return
+            return False
 
         data.available_train_upgrades -= 1
         train.is_upgraded = True
         pg.event.post(pg.event.Event(TRAINS_CHANGED))
+        return True
 
     def delete_train(self, train: Train):
         train.current_segment.rail.trains.remove(train)
@@ -180,19 +182,29 @@ class MiniMattro(ABC):
             data.available_train_upgrades += 1
         pg.event.post(pg.event.Event(TRAINS_CHANGED))
 
-    def connect(self, s1: int, s2: int, r: int):
+    def connect(self, s1: int, s2: int, r: int) -> bool:
         rail = data.rails[r]
+        # cant join a station to itself
+        if s1 == s2:
+            return False
+
+        # if invalid configuration, try to swap them
         if not rail.is_station_valid(s1) or rail.is_on_rail(s2):
-            # print("invalid connect action")
-            return
+            s1, s2 = s2, s1
+
+        if not rail.is_station_valid(s1) or rail.is_on_rail(s2):
+            # still invalid configuration -> invalid action
+            return False
 
         segment = TrackSegment(rail, data.stations[s1].location, (s1, None))
         segment.update_dst(data.stations, s2)
         rail.add_segment(segment, data.stations)
+        return True
 
-    def remove_station(self, s: int, r: int):
+    def remove_station(self, s: int, r: int) -> bool:
         if not data.rails[r].can_remove_station(s):
             # print("invalid remove action")
-            return
+            return False
 
         data.rails[r].remove_station(s, data.stations)
+        return True
