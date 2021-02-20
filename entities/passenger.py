@@ -4,12 +4,17 @@ from pygame import Vector2
 from time import time
 from util.constants import LOSE_POINT
 
+# from entities.segment import TrackSegment
 
 class Passenger(object):
 
     def __init__(self, shape: Shape):
         self.shape = shape
+<<<<<<< HEAD
         self.is_boarding: bool = False
+=======
+        self.path = []
+>>>>>>> origin/shortestPath
 
     def draw(self, surface, location, offset):
         location = Vector2(location.x + (15 * offset), location.y)

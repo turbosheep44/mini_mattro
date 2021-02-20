@@ -33,8 +33,21 @@ class Train(object):
         elif self.end_of_life:
             self.process_end_of_life(dt, data)
 
+<<<<<<< HEAD
         elif len(self.disembark) > 0:
             self.process_disembark(dt, data)
+=======
+            station = data.stations[self.stopped_station]
+            passenger = self.disembark.pop()
+            if passenger.shape != station.shape:
+                station.passengers.append(passenger)
+                self.passengers.remove(passenger)
+
+            else:
+                pg.event.post(pg.event.Event(SCORE_POINT))
+                self.passengers.remove(passenger)
+
+>>>>>>> origin/shortestPath
 
         elif len(self.embark) > 0:
             self.process_embark(dt, data)
@@ -124,9 +137,14 @@ class Train(object):
         return False
 
     def draw(self, surface):
+<<<<<<< HEAD
         pt, dv = self.current_segment.lerp_position(min(1, max(0, self.position)))
         self.last_position = pt
 
+=======
+        pt, dv = self.current_segment.lerp_position(self.position)
+        # print(self.direction, self.position, self.current_segment.stations,  self.current_segment.color)
+>>>>>>> origin/shortestPath
         dv.scale_to_length(30)
         if self.direction != 1:
             dv.rotate_ip(180)
