@@ -187,7 +187,7 @@ class MiniMattro(ABC):
 
 
     def calculate_path(passenger, station, train):
-        print("Calculating Distance")
+        #print("Calculating Distance")
 
         if passenger.shape == station.shape:
             return []
@@ -243,6 +243,10 @@ class MiniMattro(ABC):
                     
                     static_difference = static_path - changeover_path 
 
+                    #! Sometimes rails.trains would be empty
+                    if len(data.rails[this_railway].trains) == 0:
+                        continue
+                    
                     train = data.rails[this_railway].trains[0]
                     railway = railway_segments[this_railway]
 

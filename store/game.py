@@ -2,7 +2,7 @@ import pygame as pg
 import random
 from pygame.constants import K_SPACE
 
-from gui import setup_gui
+from util.gui import *
 from entities import TrackSegment, Station, Train, dijkstras, graph, allpaths
 from util import *
 import math
