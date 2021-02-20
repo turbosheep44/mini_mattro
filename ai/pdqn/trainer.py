@@ -1,5 +1,5 @@
 from util import data
-from pdqn_agent import PDQN_Agent
+from ai.pdqn.pdqn_agent import PDQN_Agent
 from game_ai import MiniMattroAI
 
 EPISODES = 5000

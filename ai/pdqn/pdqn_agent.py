@@ -6,7 +6,7 @@ from torch import nn, optim
 from torch.autograd import Variable
 import numpy as np
 from torch.serialization import DEFAULT_PROTOCOL
-from memory import Memory
+from ai.pdqn.memory import Memory
 
 EPSILON_INITAIL: float = 1
 EPSILON_FINAL: float = 0.01
