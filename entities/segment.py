@@ -275,3 +275,9 @@ class TrackSegment(object):
         self.origin, self.dst = self.dst, self.origin
         self.cardinals.reverse()
         self.pts.reverse()
+
+    def src_station(self, direction: int) -> int:
+        return self.stations[0 if direction == 1 else 1]
+
+    def dst_station(self, direction: int) -> int:
+        return self.stations[1 if direction == 1 else 0]

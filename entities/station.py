@@ -1,6 +1,4 @@
-from pygame import color
-from entities import passenger
-from util.constants import LOSE_DELAY, LOSE_POINT, PASSENGER_LOSE
+from util.constants import LOSE_DELAY,  PASSENGER_LOSE
 from util.draw import Shape
 from entities.passenger import Passenger
 import pygame as pg

@@ -1,9 +1,8 @@
-
+from entities.dijkstras import Graph
 import random
-from pygame.constants import K_SPACE
 from pygame.event import Event
 from util.gui import *
-from entities import TrackSegment, Station, Train, allpaths, graph
+from entities import TrackSegment, Station, Train
 from util import *
 from abc import ABC, abstractmethod
 import pygame as pg
@@ -126,219 +125,106 @@ class MiniMattro(ABC):
 
         pg.display.flip()
 
-    def get_stations_by_shape(destination_shape: Shape):
-
-        destination_stations: Station = []
+    def get_stations_by_shape(self, destination_shape: Shape) -> 'list[int]':
+        destination_stations: 'list[int]' = []
         for i, s in enumerate(data.stations):
             if s.shape == destination_shape:
                 destination_stations.append(i)
-
         return destination_stations
 
-    def get_rails():
+    def _static_graph(self, station: int) -> Graph:
+        """
+        construct a `Graph` indicating the current state of connections between stations,
+        initialised so that each edge has 1.2x it's actual cost (and no owner) to penalise 
+        the use of static lengths
 
-        rails = []
+        if a rail passes through `station` then its connections are not added (since they should be 
+        added using the live train positions)
+        """
+        graph = Graph()
 
-        for r in data.rails:
-            for s in r.segments:
-                rails.append((str(s.stations[0]), str(s.stations[1])))
-                rails.append((str(s.stations[1]), str(s.stations[0])))
-
-        paths = {}
-
-        for rail in rails:
-            paths[rail[0]] = []
-
-        for rail in rails:
-            l = paths[rail[0]]
-            l.append(rail[1])
-
-        return paths
-
-    def find_path(start, end, path=[]):
-
-        paths = MiniMattro.get_rails()
-
-        path = path + [start]
-        if start == end:
-            return path
-        if start not in paths:
-            return None
-        for node in paths[start]:
-            if node not in path:
-                newpath = MiniMattro.find_path(node, end, path)
-                if newpath:
-                    return newpath
-        return None
-
-    def changeover(path, railway_segments, this_railway):
-
-        path_copy = path.copy()
-
-        while this_railway == None:
-            for rail in railway_segments:
-                if (" ".join(map(str, path_copy)) in " ".join(map(str, rail))) or (" ".join(map(str, path_copy)) in " ".join(map(str, (reversed(rail))))):
-                    this_railway = railway_segments.index(rail)
-            if this_railway == None:
-                path_copy.pop()
-        return this_railway, path_copy
-
-    def calculate_path(passenger, station, train):
-        #print("Calculating Distance")
-
-        if passenger.shape == station.shape:
-            return []
-
-        start = str(data.stations.index(station))
-        destination_shape = passenger.shape
-
-        all_path_sums = []
-        available_stations = MiniMattro.get_stations_by_shape(destination_shape)
-
-        # weights_graph = graph.Graph()
-        connection = allpaths.Graph(len(data.stations))
+        for s in range(len(data.stations)):
+            graph.add_node(s)
 
         for rail in data.rails:
-            for seg in rail.segments:
-                connection.addEdge(seg.stations[0], seg.stations[1])
-                connection.addEdge(seg.stations[1], seg.stations[0])
+            if rail.is_on_rail(station):
+                continue
+            for segment in rail.segments:
+                src, dst = segment.stations[0], segment.stations[1]
+                graph.add_edge(src, dst, segment.length*1.2)  # use 1.2 multiplier to penalise "static" links
+                graph.add_edge(dst, src, segment.length*1.2)
 
-        for stage in available_stations:
-            to = str(stage)
+        return graph
 
-            if MiniMattro.find_path(start, to) != None:
+    def _construct_graph(self, station: int) -> Graph:
+        """
+        constructs a `Graph` where weights are calculated based on the trains positions 
+        for those rails passing through station and calculated statically otherwise
+        """
+        graph = self._static_graph(station)
 
-                railway_segments = []
-                for count, rail in enumerate(data.rails):
-                    railway_segments.append([])
-                    if len(rail.segments) == 0:
-                        continue
-                    for s in rail.segments:
-                        railway_segments[count].append(s.stations[0])
-                    railway_segments[count].append(rail.segments[-1].stations[-1])
+        live_rails = [rail for rail in data.rails if rail.is_on_rail(station)]
+        for rail in live_rails:
+            if len(rail.trains) == 0:
+                continue
 
-                paths = []
-                connection.printAllPaths(int(start), int(to), paths)
+            for train in rail.trains:
 
-                for path in paths:
+                train_start_station = train.destination()
+                train_start_direction = train.direction
+                direction = train.direction
+                current_segment = train.current_segment
+                cost = train.distance_to_dst()
 
-                    this_railway = None
+                # work out distance to the station we are interested in
+                while current_segment.dst_station(direction) != station:
+                    current_segment, direction = current_segment.next_segment(direction)
+                    cost += current_segment.length
 
-                    static_path = 0
+                # now keep simulating train movement until we complete a loop of the track
+                # during this process also give costs to graph edges
+                #
+                # if the train is approaching the target station, it will not move in the first loop
+                # this loop is a do-while to ensure that the train moves at least once
+                while True:
+                    current_segment, direction = current_segment.next_segment(direction)
+                    cost += current_segment.length
+                    graph.add_edge(station, current_segment.dst_station(direction), cost * (0.5 if train.is_upgraded else 1), train)
 
-                    for p in range(len(path)-1):
-                        static_path += (data.stations[path[p]].location).distance_to(data.stations[path[p+1]].location)
+                    if current_segment.dst_station(direction) == train_start_station and direction == train_start_direction:
+                        break
 
-                    this_railway, path = MiniMattro.changeover(path, railway_segments, this_railway)
+        return graph
 
-                    changeover_path = 0
-                    for p in range(len(path)-1):
-                        changeover_path += data.stations[int(path[p])].location.distance_to(data.stations[int(path[p+1])].location)
+    def _should_use_train(self, graph: Graph, start: int,  dst: Shape, train: Train):
+        """
+        given a `Graph` and a starting station, works out the quickest way to get to a station of the given shape.
+        then checks whether the first leg of that journey belongs to the given train and returns True if so and false otherwise
+        """
+        possible_destinations = self.get_stations_by_shape(dst)
+        shortest_info = graph.shortest(start, possible_destinations)
 
-                    static_difference = static_path - changeover_path
-
-                    #! Sometimes rails.trains would be empty
-                    if len(data.rails[this_railway].trains) == 0:
-                        continue
-
-                    train = data.rails[this_railway].trains[0]
-                    railway = railway_segments[this_railway]
-
-                    path_sum = 0
-                    path_sum += MiniMattro.train_travel(path, railway, train, station)
-
-                    path_sum += static_difference
-
-                    all_path_sums.append((path, path_sum))
-
-        # print("    (Paths, Weights):   ", all_path_sums, "\n\n ")
-
-        if len(all_path_sums) > 0:
-            shortest_path = sorted(all_path_sums, key=lambda tup: tup[1])[0][0]
-            return shortest_path
-        else:
-            return []
-
-    def train_travel(path, railway, train, station):
-
-        path_sum = 0
-
-        path_seg = [int(i) for i in path][:2]
-        path_direction = 0
-
-        this_station = data.stations.index(station)
-
-        dep = path[0]
-        arr = path[-1]
-
-        if train.direction == 1:
-            next_station = (train.current_segment.stations)[1]
-            # print("----Next Station ----", next_station)
-        else:
-            next_station = (train.current_segment.stations)[0]
-            # print("----Next Station ----", next_station)
-
-        if railway.index(dep) < railway.index(arr):
-            path_direction = 1
-        else:
-            path_direction = -1
-
-        is_dep = False
-        is_arr = False
-
-        next_segment = train.current_segment
-        dir_of_travel = train.direction
-        pos = train.position
-
-        if pos > 1:
-            pos = 1
-
-        # path_sum += (train.current_segment.length * ((1-pos) if train.direction ==1 else pos))
-        path_sum += (train.current_segment.length * (1-pos))
-
-        while (next_station != arr) and (is_dep == False):
-
-            next_segment, dir_of_travel = next_segment.next_segment(dir_of_travel)
-
-            path_sum += next_segment.length
-
-            next_station = next_segment.stations[0 if dir_of_travel == -1 else 1]
-
-            if next_station == dep:
-                is_dep = True
-
-        return path_sum
-
-    def board(shortest_path, train, on_station):
-
-        if len(shortest_path) == 0:
+        # if there is no possible path, then dont get on any train
+        if shortest_info == None:
             return False
 
-        seg = list(map(int, shortest_path))[:2]
-        seg.sort()
-
-        next_segment, new_dir = (train.current_segment).next_segment(train.direction)
-
-        train_seg = list(next_segment.stations)
-        train_seg.sort()
-
-        if seg == train_seg:
-            return True
-        else:
-            return False
+        # get on this train if the first edge in the shortest path is owned by this train
+        _, __, path, edge_owners = shortest_info
+        return len(path) == 1 or edge_owners[0] == train
 
     def train_stop(self, event):
-        station: Station = data.stations[event.station]
+        s: int = event.station
+        station: Station = data.stations[s]
         train: Train = event.train
 
+        graph = self._construct_graph(s)
+
         for passenger in train.passengers:
-            fastest_path = MiniMattro.calculate_path(passenger, station, train)
-            if MiniMattro.board(fastest_path, train, False) == False:
+            if passenger.shape == station.shape or not self._should_use_train(graph, s, passenger.shape, train):
                 train.disembark.append(passenger)
 
         for passenger in station.passengers:
-            fastest_path = MiniMattro.calculate_path(passenger, station, train)
-            if MiniMattro.board(fastest_path, train, True):
+            if not passenger.is_boarding and self._should_use_train(graph, s, passenger.shape, train):
                 train.embark.append(passenger)
                 passenger.is_boarding = True
 

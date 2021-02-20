@@ -1,5 +1,8 @@
 from util.constants import *
-from entities import Rail, TrackSegment, Station
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from entities import Rail, TrackSegment, Station
 
 
 class Data(object):

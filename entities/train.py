@@ -35,16 +35,6 @@ class Train(object):
 
         elif len(self.disembark) > 0:
             self.process_disembark(dt, data)
-            station = data.stations[self.stopped_station]
-            passenger = self.disembark.pop()
-            if passenger.shape != station.shape:
-                station.passengers.append(passenger)
-                self.passengers.remove(passenger)
-
-            else:
-                pg.event.post(pg.event.Event(SCORE_POINT))
-                self.passengers.remove(passenger)
-
 
         elif len(self.embark) > 0:
             self.process_embark(dt, data)
@@ -59,6 +49,7 @@ class Train(object):
         self.position += self.current_segment.position_update * dt * self.direction * (2 if self.is_upgraded else 1)
 
         if self.position > 1 or self.position < 0:
+            self.position = min(1, max(0, self.position))  # clamp position in range [0, 1]
             pg.event.post(pg.event.Event(TRAIN_STOP, train=self,
                                          station=self.current_segment.stations[round(self.position)]))
 
@@ -108,13 +99,7 @@ class Train(object):
         # board one passenger
         station = data.stations[self.stopped_station]
         passenger = self.embark.pop()
-
-        #! Sometimes passenger wouldn't be in station.passengers so I added this if-stmt
-        if passenger in station.passengers:
-            station.passengers.remove(passenger)
-        else:
-            return
-
+        station.passengers.remove(passenger)
         self.passengers.append(passenger)
         passenger.is_boarding = False
 
@@ -133,6 +118,16 @@ class Train(object):
     def choose_next_segment(self):
         self.current_segment, self.direction = self.current_segment.next_segment(self.direction)
         self.position = 0 if self.direction == 1 else 1
+
+    def origin(self) -> int:
+        return self.current_segment.src_station(self.direction)
+
+    def destination(self) -> int:
+        return self.current_segment.dst_station(self.direction)
+
+    def distance_to_dst(self) -> int:
+        position = (1-self.position) if self.direction == 1 else self.position
+        return self.current_segment.length * position
 
     def is_hovering(self, mouse: Vector2):
         if Vector2(mouse).distance_to(self.last_position) < 30:
