@@ -2,10 +2,10 @@
   
 * `game_ai.py` is the AI version of the game, where an action is to be given to the `play_step(action)` function. It returns the reward, game_over, and score. 
 
-> The action is in the following format: [ MODE | STATIONS | RAILS]. For example:
+> The action is in the following format: [ MODE | STATIONS | RAILS ]. For example:
 >
 > ```
->MODE = [1 0 0]
+>MODE = [1 0 0 0 0 0]
 >STATIONS = [1 1 0 0 0 0 0 0]
 >RAILS = [1 0 0]
 >```

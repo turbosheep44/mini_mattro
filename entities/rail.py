@@ -125,7 +125,7 @@ class Rail(object):
             for i in range(1, len(self.segments)-1):
                 self.segments[i].previous, self.segments[i].next = self.segments[i-1], self.segments[i+1]
 
-    def is_station_valid(self, i) -> bool:
+    def is_station_valid(self, i):
         """
         checks if a station is valid to start a new track segment
         a valid station is either at the start or the end of the line
@@ -141,7 +141,7 @@ class Rail(object):
         # only start and end stations are valid
         return i == self.segments[0].stations[0] or i == self.segments[-1].stations[1]
 
-    def is_on_rail(self, i) -> bool:
+    def is_on_rail(self, i):
         """
         determines whether the station is on this line
         """

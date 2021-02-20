@@ -35,6 +35,16 @@ class Train(object):
 
         elif len(self.disembark) > 0:
             self.process_disembark(dt, data)
+            station = data.stations[self.stopped_station]
+            passenger = self.disembark.pop()
+            if passenger.shape != station.shape:
+                station.passengers.append(passenger)
+                self.passengers.remove(passenger)
+
+            else:
+                pg.event.post(pg.event.Event(SCORE_POINT))
+                self.passengers.remove(passenger)
+
 
         elif len(self.embark) > 0:
             self.process_embark(dt, data)
@@ -98,7 +108,13 @@ class Train(object):
         # board one passenger
         station = data.stations[self.stopped_station]
         passenger = self.embark.pop()
-        station.passengers.remove(passenger)
+
+        #! Sometimes passenger wouldn't be in station.passengers so I added this if-stmt
+        if passenger in station.passengers:
+            station.passengers.remove(passenger)
+        else:
+            return
+
         self.passengers.append(passenger)
         passenger.is_boarding = False
 
