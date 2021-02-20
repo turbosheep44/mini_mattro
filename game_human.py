@@ -42,7 +42,7 @@ class MiniMattroHuman(MiniMattro):
     def left_click_up(self, event):
         if self.tmp_segment:
             s = self.clip_to_station(event.pos)
-            if s != None and not data.active_rail.is_on_rail(s):
+            if s != None and not data.active_rail.is_on_rail(s) and s != self.tmp_segment.stations[0]:
                 self.tmp_segment.update_dst(data.stations, s)
                 data.active_rail.add_segment(self.tmp_segment, data.stations)
                 # dont call self.connect here because it might change the way the segment looks
