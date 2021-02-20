@@ -1,4 +1,3 @@
-from pdqn_agent import HIDDEN_LAYERS
 import torch
 import torch.nn as nn
 import torch.optim as optim
