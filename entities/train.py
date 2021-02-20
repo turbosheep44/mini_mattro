@@ -109,11 +109,12 @@ class Train(object):
         station = data.stations[self.stopped_station]
         passenger = self.embark.pop()
 
+        #! Sometimes passenger wouldn't be in station.passengers so I added this if-stmt
         if passenger in station.passengers:
             station.passengers.remove(passenger)
         else:
             return
-            
+
         self.passengers.append(passenger)
         passenger.is_boarding = False
 
