@@ -1,8 +1,7 @@
-from util.constants import *
 
-from typing import TYPE_CHECKING
+from typing import Generator, TYPE_CHECKING
 if TYPE_CHECKING:
-    from entities import Rail, TrackSegment, Station
+    from entities import Rail, Station, Train
 
 
 class Data(object):
@@ -31,7 +30,7 @@ class Data(object):
     def reset_color(self):
         Data.NEXT_COLOR = 0
 
-    def trains(self):
+    def trains(self) -> 'Generator[Train]':
         for r in self.rails:
             for t in r.trains:
                 yield t
