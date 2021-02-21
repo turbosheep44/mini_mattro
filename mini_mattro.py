@@ -186,13 +186,20 @@ class MiniMattro(ABC):
                 #
                 # if the train is approaching the target station, it will not move in the first loop
                 # this loop is a do-while to ensure that the train moves at least once
+                reached_start_of_line = 0
+                start_of_line = rail.segments[0].stations[1]
                 while True:
                     current_segment, direction = current_segment.next_segment(direction)
                     cost += current_segment.length
                     graph.add_edge(station, current_segment.dst_station(direction), cost * (0.5 if train.is_upgraded else 1), train)
 
-                    if current_segment.dst_station(direction) == train_start_station and direction == train_start_direction:
+                    if (current_segment.dst_station(direction) == train_start_station and direction == train_start_direction) or \
+                            reached_start_of_line > 1:
                         break
+
+                    # if the train started on a destroyed segment it will never get back there, so use start of line as a new marker
+                    if current_segment.dst_station(direction) == start_of_line and direction == 1:
+                        reached_start_of_line += 1
 
         return graph
 
