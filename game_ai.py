@@ -40,8 +40,8 @@ class MiniMattroAI(MiniMattro):
         self.reward = 0
         action_valid = self.do_action(action, params)
         # penalise heavily for actions which are not valid
-        # if not action_valid:
-        # self.reward -= 100
+        if not action_valid:
+            self.reward -= 100
 
         # play up to n frames
         for _ in range(self.frames_per_step):
@@ -96,7 +96,7 @@ class MiniMattroAI(MiniMattro):
 
                     # found path to station with correct shape
                     if data.stations[current].shape == p.shape:
-                        self.reward += 0.1
+                        self.reward += 0.2
                         break
 
                     # add places we can go from this station
@@ -107,7 +107,7 @@ class MiniMattroAI(MiniMattro):
         # reward for each travelling passenger
         for rail in data.rails:
             for train in rail.trains:
-                self.reward += 0.1 * len(train.passengers)
+                self.reward += 0.2 * len(train.passengers)
 
     def do_action(self, action, params) -> bool:
         if type(action) == type(None):
@@ -154,75 +154,110 @@ class MiniMattroAI(MiniMattro):
         return Mode(mode), stations, rail
 
     def get_state(self):
-        state = self.get_rails_state() +  \
-            self.get_passenger_state() + self.get_train_state()
-        return np.array(state, dtype=int)
+        return np.concatenate([self.get_rails_state(), self.get_stations_state(), self.get_train_state()])
+
+    def _one_hot_array(self, classes: int, active: int):
+        arr = np.zeros(classes)
+        arr[active] = 1
+        return arr
 
     def get_train_state(self):
-        train_state = [data.available_trains, data.available_train_upgrades]
-        for rail in data.rails:
-            train_state += [
-                len(rail.trains),
-                sum(1 for train in rail.trains if train.is_upgraded),
-                sum(1 for train in rail.trains if train.end_of_life)
-            ]
-        return train_state
+        trains = []
+        for t in data.trains():
 
-    def get_passenger_state(self):
-        p_states = []
+            # one-hot encode the passengers in the form [SQUARE, CIRCLE, TRIANGLE, EMTPY]
+            passengers = []
+            for p in t.passengers:
+                passengers.append(self._one_hot_array(4, p.shape.value))
+
+            # pad to 6 passengers with empty passenger shapes
+            while len(passengers) < 6:
+                passengers.append(self._one_hot_array(4, 3))
+            passengers = np.concatenate(passengers)
+
+            # indicate which rail this passenger is on
+            rail = self._one_hot_array(4, data.rails.index(t.current_segment.rail))
+
+            # speedy?
+            upgrade = t.is_upgraded
+
+            # current location
+            from_station = self._one_hot_array(len(data.stations)+1, t.origin())
+            to_station = self._one_hot_array(len(data.stations)+1, t.destination())
+            amount_traversed = t.position if t.direction == 1 else (1-t.position)
+
+            trains.append(np.concatenate((rail, passengers, upgrade, from_station, to_station, amount_traversed), axis=None))
+
+        # pad until 5 trains
+        no_rail = self._one_hot_array(4, 3)
+        no_passenger = self._one_hot_array(4, 3)
+        from_to = self._one_hot_array(len(data.stations)+1, len(data.stations))
+        while len(trains) < 5:
+            trains.append(np.concatenate((no_rail, np.concatenate([no_passenger for _ in range(6)]), False, from_to, from_to, 0), axis=None))
+
+        return np.concatenate(trains).ravel()
+
+    def get_stations_state(self):
+        stations = []
         for s in data.stations:
-            temp = [0, 0, 0]
-            for p in s.passengers:
-                if p.shape == Shape.CIRCLE:
-                    temp[0] += 1
-                elif p.shape == Shape.SQUARE:
-                    temp[1] += 1
-                else:
-                    temp[2] += 1
-            p_states.append(temp)
-        return np.concatenate(p_states).ravel().tolist()
+            # the shape of this station
+            shape = self._one_hot_array(3, s.shape.value)
 
-    def get_distance_state(self):
-        if self.distance_state != []:
-            return self.distance_state
+            # one-hot encode up to 6 passengers
+            temp = s.passengers
+            if len(s.passengers) > 6:
+                temp = s.passengers[:6]
+            passengers = []
+            for p in temp:
+                passengers.append(self._one_hot_array(4, p.shape.value))
+            while len(passengers) < 6:
+                passengers.append(self._one_hot_array(4, 3))
+            passengers = np.concatenate(passengers)
 
-        combinations = list(itertools.combinations(data.stations, 2))
-        distance_state = []
+            # normalised distances to other stations
+            distances = []
+            for n in data.stations:
+                distances.append(s.location.distance_to(n.location))
+            largest = np.max(distances)
+            distances[:] = np.array([d/largest for d in distances])
 
-        for c in combinations:
-            distance_state.append(int(sqrt(
-                (c[0].location.x - c[1].location.x)**2 + (c[0].location.y-c[1].location.y)**2)))
+            stations.append(np.concatenate([shape, passengers, distances], axis=None))
 
-        self.distance_state = distance_state
-        return distance_state
+        return np.concatenate(stations).ravel()
 
     def get_rails_state(self):
 
         number_of_stations = len(data.stations)
-        state = np.zeros(
-            (number_of_stations, number_of_stations, 3), dtype=bool)
+        state = np.zeros((3, number_of_stations, (number_of_stations+1)))
 
-        for current_rail, rail in enumerate(data.rails):
-            for segment in rail.segments:
+        for rail_counter, rail in enumerate(data.rails):
 
-                beginning = segment.stations[0]
-                end = segment.stations[1]
-                state[beginning, end, current_rail] = True
-                state[end, beginning, current_rail] = True
+            segment_counter = 0
+            last = 0
 
-        final_rails_state = []
-        for i in range(number_of_stations-1):
-            final_rails_state = final_rails_state + \
-                state[i][(-((number_of_stations) - (i+1))):].flatten().tolist()
+            if len(rail.segments) > 0:
+                for segment_counter, segment in enumerate(rail.segments):
+                    if len(segment.stations) > 0:
+                        state[rail_counter, segment_counter, segment.stations[0]] = 1
+                        last = segment.stations[1]
 
-        return final_rails_state
+                state[rail_counter, segment_counter+1, last] = 1
+                segment_counter += 2
+
+            i = number_of_stations
+            while i > segment_counter:
+                state[rail_counter, i-1, -1] = 1
+                i -= 1
+
+        return state.ravel()
 
 
 if __name__ == '__main__':
     env = MiniMattroAI(normal_speed=True, show_frames=1)
     env.play_step(1, (1, 0, 7))
     env.play_step(1, (0, 0, 4))
-    print(env.get_state())
+    # print(env.get_state())
+    # print(env.get_state().shape)
     # env.play_step(4, [1])
     # print(env.get_state())
 
