@@ -1,6 +1,6 @@
 
 from entities.passenger import Passenger
-from util.constants import EOL_TRAIN, SCORE_POINT, TRAINS_CHANGED, TRAIN_CAPACITY,  TRAIN_SECONDS_PER_ACTION, TRAIN_STOP
+from util.constants import EOL_TRAIN, PASSENGER_PICKUP, SCORE_POINT, TRAINS_CHANGED, TRAIN_CAPACITY,  TRAIN_SECONDS_PER_ACTION, TRAIN_STOP
 from entities.segment import TrackSegment
 from util.draw import ortholine
 import pygame as pg
@@ -11,7 +11,7 @@ class Train(object):
 
     def __init__(self, segment):
         self.last_position: Vector2 = Vector2(0, 0)
-        self.position: float = 0.25
+        self.position: float = 0.05
         self.direction: float = -1
         self.current_segment: TrackSegment = segment
 
@@ -28,16 +28,16 @@ class Train(object):
     def update(self, dt, data):
         # keep moving the train until it gets to another station
         if not self.is_stopped:
-            self.move_train(dt)
+            self._move_train(dt)
 
         elif self.end_of_life:
-            self.process_end_of_life(dt, data)
+            self._process_end_of_life(dt, data)
 
         elif len(self.disembark) > 0:
-            self.process_disembark(dt, data)
+            self._process_disembark(dt, data)
 
         elif len(self.embark) > 0:
-            self.process_embark(dt, data)
+            self._process_embark(dt, data)
 
         else:
             # start moving the train again
@@ -45,7 +45,7 @@ class Train(object):
             self.is_stopped = False
             self.next_action = TRAIN_SECONDS_PER_ACTION
 
-    def move_train(self, dt):
+    def _move_train(self, dt):
         self.position += self.current_segment.position_update * dt * self.direction * (2 if self.is_upgraded else 1)
 
         if self.position > 1 or self.position < 0:
@@ -56,7 +56,7 @@ class Train(object):
             self.is_stopped = True
             self.stopped_station = self.current_segment.stations[round(self.position)]
 
-    def process_end_of_life(self, dt, data):
+    def _process_end_of_life(self, dt, data):
         if not self.perform_action(dt):
             return
 
@@ -73,7 +73,7 @@ class Train(object):
         else:
             pg.event.post(pg.event.Event(EOL_TRAIN, train=self))
 
-    def process_disembark(self, dt, data):
+    def _process_disembark(self, dt, data):
         if not self.perform_action(dt):
             return
 
@@ -85,7 +85,7 @@ class Train(object):
         else:
             pg.event.post(pg.event.Event(SCORE_POINT))
 
-    def process_embark(self, dt, data):
+    def _process_embark(self, dt, data):
         if not self.perform_action(dt):
             return
 
@@ -102,6 +102,7 @@ class Train(object):
         station.passengers.remove(passenger)
         self.passengers.append(passenger)
         passenger.is_boarding = False
+        pg.event.post(pg.event.Event(PASSENGER_PICKUP))
 
     def perform_action(self, dt) -> bool:
         """

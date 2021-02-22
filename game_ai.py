@@ -1,15 +1,11 @@
 from mini_mattro import FPS, MiniMattro
-import pygame as pg
 import random
-from pygame.constants import K_SPACE
 from pygame.event import Event
 from util.gui import *
 from util import *
 from util.gui import setup_gui
 import numpy as np
 import enum
-import itertools
-from math import sqrt
 
 
 class Mode(enum.Enum):
@@ -40,8 +36,8 @@ class MiniMattroAI(MiniMattro):
         self.reward = 0
         action_valid = self.do_action(action, params)
         # penalise heavily for actions which are not valid
-        if not action_valid:
-            self.reward -= 100
+        # if not action_valid:
+        #     self.reward -= 100
 
         # play up to n frames
         for _ in range(self.frames_per_step):
@@ -58,21 +54,38 @@ class MiniMattroAI(MiniMattro):
             if game_over:
                 break
 
-        self.calculate_state_penalties()
+        self._calculate_state_penalties()
         return game_over, self.reward
 
     def handle_events(self, events: 'list[Event]') -> None:
         for event in events:
             if event.type == SCORE_POINT:
-                self.reward += 1
+                # self.reward += 1
+                pass
+            elif event.type == PASSENGER_PICKUP:
+                self.reward += 0.5
 
-    def calculate_state_penalties(self) -> None:
-        # penalise when stations are overflowing and for every person waiting
+    def _calculate_state_penalties(self) -> None:
+        self._penalise_overflowing_stations(10)
+        self._reward_passengers_with_path(0.1, -10)
+        self._reward_travelling_passengers(1)
+
+    def _penalise_overflowing_stations(self, penalty) -> None:
+        """
+        penalise when stations are overflowing; the penalty is is proportional to how close the station is to causing game over
+
+        \t `self.reward -= penalty * percent_lost`
+        """
         for s in data.stations:
             if s.losing:
-                self.reward -= 10
-            self.reward -= 0.1 * len(s.passengers)
+                percent_lost = (LOSE_DELAY - s.loseTime) / LOSE_DELAY
+                self.reward -= penalty * percent_lost
 
+    def _reward_passengers_with_path(self, reward, penalty):
+        """
+        add `reward` to the total reward for each passenger at a station who has a path to their destination.
+        add `penalty` to the total reward for each passenger at a station with no path to their destination
+        """
         graph = [set() for _ in data.stations]
         for rail in data.rails:
             for segment in rail.segments:
@@ -84,11 +97,13 @@ class MiniMattroAI(MiniMattro):
         # bfs to see if it is possible to deliver each passenger
         visited = set()
         waiting: 'list[int]' = []
+        found_path: bool = None
         for (start, station) in enumerate(data.stations):
             for p in station.passengers:
                 visited.clear()
                 waiting.clear()
                 waiting.append(start)
+                found_path = False
 
                 while len(waiting) != 0:
                     current = waiting.pop(0)
@@ -96,7 +111,7 @@ class MiniMattroAI(MiniMattro):
 
                     # found path to station with correct shape
                     if data.stations[current].shape == p.shape:
-                        self.reward += 0.2
+                        found_path = True
                         break
 
                     # add places we can go from this station
@@ -104,10 +119,15 @@ class MiniMattroAI(MiniMattro):
                         if nxt not in visited and nxt not in waiting:
                             waiting.append(nxt)
 
-        # reward for each travelling passenger
-        for rail in data.rails:
-            for train in rail.trains:
-                self.reward += 0.2 * len(train.passengers)
+                # reward of penalise based on whether a path was found
+                self.reward += (reward if found_path else penalty)
+
+    def _reward_travelling_passengers(self, reward):
+        """
+        adds `reward` to the total reward for each passenger on a train
+        """
+        for train in data.trains():
+            self.reward += reward * len(train.passengers)
 
     def do_action(self, action, params) -> bool:
         if type(action) == type(None):
@@ -154,14 +174,20 @@ class MiniMattroAI(MiniMattro):
         return Mode(mode), stations, rail
 
     def get_state(self):
-        return np.concatenate([self.get_rails_state(), self.get_stations_state(), self.get_train_state()])
+        return np.concatenate([self._get_rails_state(), self._get_stations_state(), self._get_train_state()])
 
     def _one_hot_array(self, classes: int, active: int):
+        """
+        create a one-hot encoded numpy array for a given number of classes with the given class active
+
+            - `_one_hot_array(4, 3) == [0, 0, 0, 1]`
+            - `_one_hot_array(8, 2) == [0, 0, 1, 0, 0, 0, 0, 0]`
+        """
         arr = np.zeros(classes)
         arr[active] = 1
         return arr
 
-    def get_train_state(self):
+    def _get_train_state(self):
         trains = []
         for t in data.trains():
 
@@ -195,9 +221,10 @@ class MiniMattroAI(MiniMattro):
         while len(trains) < 5:
             trains.append(np.concatenate((no_rail, np.concatenate([no_passenger for _ in range(6)]), False, from_to, from_to, 0), axis=None))
 
+        assert len(trains) == 5
         return np.concatenate(trains).ravel()
 
-    def get_stations_state(self):
+    def _get_stations_state(self):
         stations = []
         for s in data.stations:
             # the shape of this station
@@ -221,11 +248,15 @@ class MiniMattroAI(MiniMattro):
             largest = np.max(distances)
             distances[:] = np.array([d/largest for d in distances])
 
-            stations.append(np.concatenate([shape, passengers, distances], axis=None))
+            # how close this station is to losing
+            percent_lost = ((LOSE_DELAY - s.loseTime) / LOSE_DELAY) if s.losing else 0
 
+            stations.append(np.concatenate([shape, passengers, distances, percent_lost], axis=None))
+
+        assert len(stations) == len(data.stations)
         return np.concatenate(stations).ravel()
 
-    def get_rails_state(self):
+    def _get_rails_state(self):
 
         number_of_stations = len(data.stations)
         state = np.zeros((3, number_of_stations, (number_of_stations+1)))

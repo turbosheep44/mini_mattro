@@ -13,11 +13,11 @@ MEMORY_THRESHOLD = 1024
 BATCH_SIZE = 128
 
 LR = 0.0001
-GAMMA = 0.9
+GAMMA = 0.8
 
 EPSILON_INITIAL = 1
 EPSILON_FINAL = 0.001
-EPSILON_STEPS = 5000
+EPSILON_STEPS = 10000
 
 DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 RANDOM: np.random.RandomState = np.random.RandomState()
@@ -28,7 +28,6 @@ class Agent:
     def __init__(self, state_size, num_actions):
         self._num_actions = num_actions
         self.epsilon = EPSILON_INITIAL
-        self._steps = 0
         self._updates = 0
         self.loss_values = []
 
@@ -45,11 +44,6 @@ class Agent:
         if len(self.memory) < BATCH_SIZE or len(self.memory) < MEMORY_THRESHOLD:
             return
 
-        # only train every BATCH_SIZE/20 steps
-        self._steps += 1
-        if self._steps < BATCH_SIZE/20:
-            return
-        self._steps = 0
         self._updates += 1
 
         # sample memory
@@ -92,7 +86,7 @@ class Agent:
 
         # calculate loss over the batch and weight gradients then optimise
         self.optimizer.zero_grad()
-        loss = self.loss_func(target, pred)
+        loss = self.loss_func(pred, target)
         loss.backward()
         self.optimizer.step()
 

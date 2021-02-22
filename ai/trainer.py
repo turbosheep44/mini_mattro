@@ -21,15 +21,17 @@ def plot_loss(agent):
     plt.plot(agent.loss_values)
     plt.show(block=False)
     plt.pause(.001)
+    plt.savefig("plots/plot.png")
 
 
 def train(model, load=False):
     # init envrionment and agent
-    env = MiniMattroAI(show_frames=10000, frames_per_step=60)
+    populate_actions()
+    env = MiniMattroAI(show_frames=100_000, frames_per_step=60)
     agent = Agent(len(env.get_state()), len(ACTIONS))
 
     if load == True:
-        agent.model.load_state_dict(torch.load(f"model/{model}.pth"))
+        agent.model.load_state_dict(torch.load(f"{model}.pth"))
 
     record = 0
     for i in range(EPSILON_STEPS+100):
@@ -61,7 +63,7 @@ def train(model, load=False):
         print(f"{i:4})  -> {data.score:3} | {record:3}")
         plot_loss(agent)
 
-    agent.model.save(file_name=f"model/{model}.py")
+    agent.model.save(file_name=f"{model}.py")
 
 
 def test(model):
@@ -92,6 +94,9 @@ def test(model):
 
 
 def populate_actions():
+    # start with empty list
+    ACTIONS.clear()
+
     # one action for 'do nothing'
     ACTIONS.append((Mode.DoNothing.value, None))
 
@@ -112,5 +117,4 @@ def populate_actions():
 
 
 if __name__ == '__main__':
-    populate_actions()
     train(model="model", load=False)
